@@ -1,0 +1,785 @@
+// Sanchalan — Complete Data Model v1.0
+// Every table from the data model doc is implemented here, including tables
+// tagged [FUTURE] in the source doc (bookings, payments, vendor_availability,
+// reviews, legal_checklist_items, event_media, thank_you_notes,
+// production_pipeline_items) — built now per explicit request rather than
+// deferred to Phase 2+.
+//
+// Status tags below (ACTIVE / SCAFFOLD / FUTURE) are carried over as comments
+// purely for documentation; every table is created regardless of its tag.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// 1. Identity & Accounts
+// =============================================================================
+
+enum OrganizerType {
+  individual
+  family
+  company
+  committee
+}
+
+enum OrganizerStatus {
+  active
+  suspended
+}
+
+/// [ACTIVE] The person or entity running an event.
+model Organizer {
+  id                String          @id @default(uuid()) @db.Uuid
+  phoneNumber       String          @unique @map("phone_number")
+  email             String?
+  displayName       String          @map("display_name")
+  organizerType     OrganizerType   @map("organizer_type")
+  preferredLanguage String?         @map("preferred_language")
+  createdAt         DateTime        @default(now()) @map("created_at")
+  status            OrganizerStatus
+
+  eventGroups     EventGroup[]
+  rolePermissions RolePermission[]
+
+  @@map("organizers")
+}
+
+enum VendorPriceTier {
+  essential
+  standard
+  premium
+  luxury
+}
+
+enum VendorStatus {
+  draft
+  pending_review
+  published
+  rejected
+  suspended
+}
+
+/// [ACTIVE] A business entity, entirely separate account type from organizers.
+model Vendor {
+  id                String          @id @default(uuid()) @db.Uuid
+  businessName      String          @map("business_name")
+  contactPersonName String          @map("contact_person_name")
+  phoneNumber       String          @unique @map("phone_number")
+  email             String?
+  priceTier         VendorPriceTier @map("price_tier")
+  serviceArea       String          @map("service_area")
+  status            VendorStatus
+  rejectionReason   String?         @map("rejection_reason")
+  submittedAt       DateTime?       @map("submitted_at")
+  reviewedAt        DateTime?       @map("reviewed_at")
+  reviewedBy        String?         @map("reviewed_by") @db.Uuid
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  reviewer                Admin?                   @relation(fields: [reviewedBy], references: [id])
+  vendorVendorCategories  VendorVendorCategory[]
+  portfolioItems          VendorPortfolioItem[]
+  linkedTasks             Task[]
+  budgetLines             BudgetLine[]
+  bookings                Booking[]
+  availability            VendorAvailability[]
+  reviews                 Review[]
+  eventMedia              EventMedia[]
+  productionPipelineItems ProductionPipelineItem[]
+
+  @@map("vendors")
+}
+
+/// [ACTIVE] Lookup table for vendor categories — data-driven, not hardcoded.
+model VendorCategory {
+  id                   String      @id @default(uuid()) @db.Uuid
+  categoryKey          String      @unique @map("category_key")
+  applicableEventTypes EventType[] @map("applicable_event_types")
+
+  vendorVendorCategories VendorVendorCategory[]
+
+  @@map("vendor_categories")
+}
+
+/// [ACTIVE] Junction table — a vendor can serve multiple categories.
+model VendorVendorCategory {
+  vendorId         String @map("vendor_id") @db.Uuid
+  vendorCategoryId String @map("vendor_category_id") @db.Uuid
+
+  vendor         Vendor         @relation(fields: [vendorId], references: [id])
+  vendorCategory VendorCategory @relation(fields: [vendorCategoryId], references: [id])
+
+  @@id([vendorId, vendorCategoryId])
+  @@map("vendor_vendor_categories")
+}
+
+/// [ACTIVE] Photo/video portfolio items for a vendor.
+model VendorPortfolioItem {
+  id           String  @id @default(uuid()) @db.Uuid
+  vendorId     String  @map("vendor_id") @db.Uuid
+  mediaUrl     String  @map("media_url")
+  caption      String?
+  displayOrder Int     @map("display_order")
+
+  vendor Vendor @relation(fields: [vendorId], references: [id])
+
+  @@map("vendor_portfolio_items")
+}
+
+enum AdminRole {
+  super_admin
+  vendor_reviewer
+  support
+}
+
+/// [ACTIVE] Internal team — completely separate login system from organizers/vendors.
+model Admin {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  role         AdminRole
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  reviewedVendors Vendor[]
+
+  @@map("admins")
+}
+
+enum EventGroupRole {
+  owner
+  editor
+  viewer
+  approver
+}
+
+/// [SCAFFOLD] Not needed while an EventGroup has exactly one organizer.
+/// Populated later for hired planners / co-organizing family members (Module 6).
+model RolePermission {
+  id           String         @id @default(uuid()) @db.Uuid
+  eventGroupId String         @map("event_group_id") @db.Uuid
+  userId       String         @map("user_id") @db.Uuid
+  role         EventGroupRole
+  invitedAt    DateTime       @map("invited_at")
+
+  eventGroup EventGroup @relation(fields: [eventGroupId], references: [id])
+  user       Organizer  @relation(fields: [userId], references: [id])
+
+  @@map("role_permissions")
+}
+
+// =============================================================================
+// 2. The Event Itself
+// =============================================================================
+
+enum EventType {
+  wedding
+  birthday
+  corporate
+  religious
+  engagement_only
+  custom
+}
+
+enum BudgetTier {
+  essential
+  standard
+  premium
+  luxury
+}
+
+enum EventGroupStatus {
+  planning
+  active
+  completed
+  archived
+}
+
+/// [ACTIVE] The top-level entity — a wedding, birthday, corporate offsite, etc.,
+/// all the same table, differentiated by eventType.
+model EventGroup {
+  id                  String           @id @default(uuid()) @db.Uuid
+  organizerId         String           @map("organizer_id") @db.Uuid
+  eventType           EventType        @map("event_type")
+  name                String
+  region              String
+  religionOrTradition String?          @map("religion_or_tradition")
+  totalBudget         Decimal          @map("total_budget") @db.Decimal(12, 2)
+  budgetTier          BudgetTier       @map("budget_tier")
+  guestCountEstimate  Int              @map("guest_count_estimate")
+  primaryDate         DateTime         @map("primary_date") @db.Date
+  status              EventGroupStatus
+  createdAt           DateTime         @default(now()) @map("created_at")
+
+  organizer             Organizer              @relation(fields: [organizerId], references: [id])
+  subEvents             SubEvent[]
+  guestGroups           GuestGroup[]
+  guests                Guest[]
+  rolePermissions       RolePermission[]
+  tasks                 Task[]
+  taskEditLogs          TaskEditLog[]
+  roadmapGenerationLogs RoadmapGenerationLog[]
+  budgetCategories      BudgetCategory[]
+  bookings              Booking[]
+  documents             Document[]
+  eventMedia            EventMedia[]
+  thankYouNotes         ThankYouNote[]
+  reviews               Review[]
+
+  @@map("event_groups")
+}
+
+enum SubEventStatus {
+  planned
+  in_progress
+  completed
+  cancelled
+}
+
+/// [ACTIVE] Makes multi-function events (engagement, mehendi, sangeet, wedding,
+/// reception) a first-class concept. Every Task, Guest invite, and
+/// BudgetCategory links to a sub_event_id, not directly to the event_group.
+model SubEvent {
+  id                 String         @id @default(uuid()) @db.Uuid
+  eventGroupId       String         @map("event_group_id") @db.Uuid
+  name               String
+  subEventType       String?        @map("sub_event_type")
+  date               DateTime       @db.Date
+  startTime          DateTime?      @map("start_time") @db.Time
+  endTime            DateTime?      @map("end_time") @db.Time
+  venueName          String?        @map("venue_name")
+  venueAddress       String?        @map("venue_address")
+  expectedGuestCount Int?           @map("expected_guest_count")
+  status             SubEventStatus
+
+  eventGroup              EventGroup               @relation(fields: [eventGroupId], references: [id])
+  guestSubEventInvites    GuestSubEventInvite[]
+  guestSeatingAssignments GuestSeatingAssignment[]
+  tasks                   Task[]
+
+  @@map("sub_events")
+}
+
+// =============================================================================
+// 3. Guests & RSVP
+// =============================================================================
+
+/// [ACTIVE] Flexible tagging mechanism — not hardcoded to wedding-specific labels.
+model GuestGroup {
+  id           String @id @default(uuid()) @db.Uuid
+  eventGroupId String @map("event_group_id") @db.Uuid
+  label        String
+
+  eventGroup EventGroup @relation(fields: [eventGroupId], references: [id])
+  guests     Guest[]
+
+  @@map("guest_groups")
+}
+
+/// [ACTIVE]
+model Guest {
+  id                  String   @id @default(uuid()) @db.Uuid
+  eventGroupId        String   @map("event_group_id") @db.Uuid
+  guestGroupId        String?  @map("guest_group_id") @db.Uuid
+  name                String
+  phoneNumber         String   @map("phone_number")
+  relationship        String?
+  plusOnesAllowed     Int      @default(0) @map("plus_ones_allowed")
+  plusOnesConfirmed   Int      @default(0) @map("plus_ones_confirmed")
+  travelNeeded        Boolean  @map("travel_needed")
+  accommodationNeeded Boolean  @map("accommodation_needed")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  eventGroup              EventGroup               @relation(fields: [eventGroupId], references: [id])
+  guestGroup              GuestGroup?              @relation(fields: [guestGroupId], references: [id])
+  guestSubEventInvites    GuestSubEventInvite[]
+  guestSeatingAssignments GuestSeatingAssignment[]
+  thankYouNotes           ThankYouNote[]
+
+  @@map("guests")
+}
+
+enum RsvpStatus {
+  pending
+  confirmed
+  declined
+  no_response
+}
+
+/// [ACTIVE] Junction table — a guest may be invited to some sub-events and not
+/// others; RSVP status is tracked per sub-event, not just per guest.
+model GuestSubEventInvite {
+  id          String     @id @default(uuid()) @db.Uuid
+  guestId     String     @map("guest_id") @db.Uuid
+  subEventId  String     @map("sub_event_id") @db.Uuid
+  rsvpStatus  RsvpStatus @map("rsvp_status")
+  respondedAt DateTime?  @map("responded_at")
+
+  guest    Guest    @relation(fields: [guestId], references: [id])
+  subEvent SubEvent @relation(fields: [subEventId], references: [id])
+
+  @@map("guest_sub_event_invites")
+}
+
+/// [SCAFFOLD] Not built as a UI in Phase 1, but hangs directly off guests and sub_events.
+model GuestSeatingAssignment {
+  id          String  @id @default(uuid()) @db.Uuid
+  guestId     String  @map("guest_id") @db.Uuid
+  subEventId  String  @map("sub_event_id") @db.Uuid
+  tableNumber String? @map("table_number")
+
+  guest    Guest    @relation(fields: [guestId], references: [id])
+  subEvent SubEvent @relation(fields: [subEventId], references: [id])
+
+  @@map("guest_seating_assignments")
+}
+
+// =============================================================================
+// 4. The AI Roadmap Engine (Tasks)
+// =============================================================================
+
+/// [ACTIVE] Lookup table — data-driven so new categories don't require code changes.
+model TaskCategory {
+  id                   String      @id @default(uuid()) @db.Uuid
+  categoryKey          String      @unique @map("category_key")
+  applicableEventTypes EventType[] @map("applicable_event_types")
+
+  taskTemplates TaskTemplate[]
+  tasks         Task[]
+
+  @@map("task_categories")
+}
+
+enum TaskOwnerType {
+  organizer
+  vendor
+  planner
+}
+
+/// [ACTIVE] Base template library — the reference set the AI selects from and
+/// customizes, keeping roadmap output consistent instead of hallucinated fresh.
+model TaskTemplate {
+  id                    String        @id @default(uuid()) @db.Uuid
+  eventType             EventType     @map("event_type")
+  region                String?
+  religionOrTradition   String?       @map("religion_or_tradition")
+  taskCategoryId        String        @map("task_category_id") @db.Uuid
+  taskKey               String        @map("task_key")
+  defaultNameEn         String        @map("default_name_en")
+  defaultLeadTimeDays   Int           @map("default_lead_time_days")
+  defaultDependencyKeys String[]      @map("default_dependency_keys")
+  typicalOwnerType      TaskOwnerType @map("typical_owner_type")
+  version               Int
+
+  taskCategory TaskCategory @relation(fields: [taskCategoryId], references: [id])
+
+  @@map("task_templates")
+}
+
+enum TaskStatus {
+  not_started
+  in_progress
+  done
+  overdue
+  not_applicable
+}
+
+enum TaskSource {
+  ai_generated
+  template_default
+  user_added
+}
+
+/// [ACTIVE] The actual, real, per-event instance of a task.
+model Task {
+  id                     String        @id @default(uuid()) @db.Uuid
+  eventGroupId           String        @map("event_group_id") @db.Uuid
+  subEventId             String?       @map("sub_event_id") @db.Uuid
+  taskCategoryId         String        @map("task_category_id") @db.Uuid
+  name                   String
+  description            String?
+  status                 TaskStatus
+  dueDate                DateTime?     @map("due_date") @db.Date
+  source                 TaskSource
+  ownerType              TaskOwnerType @map("owner_type")
+  ownerUserId            String?       @map("owner_user_id") @db.Uuid
+  linkedVendorId         String?       @map("linked_vendor_id") @db.Uuid
+  linkedBudgetCategoryId String?       @map("linked_budget_category_id") @db.Uuid
+  createdAt              DateTime      @default(now()) @map("created_at")
+  updatedAt              DateTime      @updatedAt @map("updated_at")
+
+  eventGroup           EventGroup      @relation(fields: [eventGroupId], references: [id])
+  subEvent             SubEvent?       @relation(fields: [subEventId], references: [id])
+  taskCategory         TaskCategory    @relation(fields: [taskCategoryId], references: [id])
+  linkedVendor         Vendor?         @relation(fields: [linkedVendorId], references: [id])
+  linkedBudgetCategory BudgetCategory? @relation(fields: [linkedBudgetCategoryId], references: [id])
+
+  dependentLinks          TaskDependency[]         @relation("TaskDependents")
+  dependencyLinks         TaskDependency[]         @relation("TaskDependsOn")
+  taskEditLogs            TaskEditLog[]
+  bookings                Booking[]
+  budgetLines             BudgetLine[]
+  productionPipelineItems ProductionPipelineItem[]
+
+  @@map("tasks")
+}
+
+/// [ACTIVE] Modeled as its own junction table (not an array column) because
+/// dependency graphs need to be queried both directions.
+model TaskDependency {
+  taskId          String @map("task_id") @db.Uuid
+  dependsOnTaskId String @map("depends_on_task_id") @db.Uuid
+
+  task          Task @relation("TaskDependents", fields: [taskId], references: [id])
+  dependsOnTask Task @relation("TaskDependsOn", fields: [dependsOnTaskId], references: [id])
+
+  @@id([taskId, dependsOnTaskId])
+  @@map("task_dependencies")
+}
+
+enum TaskEditAction {
+  created
+  edited
+  status_changed
+  deleted
+  reordered
+  marked_not_applicable
+}
+
+/// [ACTIVE, write-only / unused downstream in Phase 1] Raw material for the
+/// self-improving templates feature — cannot be recreated retroactively.
+model TaskEditLog {
+  id            String         @id @default(uuid()) @db.Uuid
+  taskId        String         @map("task_id") @db.Uuid
+  eventGroupId  String         @map("event_group_id") @db.Uuid
+  action        TaskEditAction
+  previousValue Json?          @map("previous_value")
+  newValue      Json?          @map("new_value")
+  changedBy     String         @map("changed_by") @db.Uuid
+  changedAt     DateTime       @map("changed_at")
+
+  task       Task       @relation(fields: [taskId], references: [id])
+  eventGroup EventGroup @relation(fields: [eventGroupId], references: [id])
+
+  @@map("task_edit_logs")
+}
+
+/// [ACTIVE, write-only in Phase 1] Logs the actual AI call — input params,
+/// which templates were selected, which LLM/model version, and raw output.
+model RoadmapGenerationLog {
+  id              String   @id @default(uuid()) @db.Uuid
+  eventGroupId    String   @map("event_group_id") @db.Uuid
+  inputParams     Json     @map("input_params")
+  templateIdsUsed String[] @map("template_ids_used")
+  llmModelUsed    String   @map("llm_model_used")
+  rawOutput       Json     @map("raw_output")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  eventGroup EventGroup @relation(fields: [eventGroupId], references: [id])
+
+  @@map("roadmap_generation_logs")
+}
+
+// =============================================================================
+// 5. Budget & Payments
+// =============================================================================
+
+/// [ACTIVE]
+model BudgetCategory {
+  id                 String      @id @default(uuid()) @db.Uuid
+  eventGroupId       String      @map("event_group_id") @db.Uuid
+  categoryKey        String      @map("category_key")
+  allocatedAmount    Decimal     @map("allocated_amount") @db.Decimal(12, 2)
+  budgetTierOverride BudgetTier? @map("budget_tier_override")
+
+  eventGroup  EventGroup   @relation(fields: [eventGroupId], references: [id])
+  budgetLines BudgetLine[]
+  tasks       Task[]
+
+  @@map("budget_categories")
+}
+
+enum BudgetEntryType {
+  planned
+  actual
+}
+
+/// [ACTIVE] Individual planned or actual spend entries within a category.
+model BudgetLine {
+  id               String          @id @default(uuid()) @db.Uuid
+  budgetCategoryId String          @map("budget_category_id") @db.Uuid
+  description      String
+  amount           Decimal         @db.Decimal(12, 2)
+  entryType        BudgetEntryType @map("entry_type")
+  linkedVendorId   String?         @map("linked_vendor_id") @db.Uuid
+  linkedTaskId     String?         @map("linked_task_id") @db.Uuid
+  payerLabel       String?         @map("payer_label")
+  createdAt        DateTime        @default(now()) @map("created_at")
+
+  budgetCategory BudgetCategory @relation(fields: [budgetCategoryId], references: [id])
+  linkedVendor   Vendor?        @relation(fields: [linkedVendorId], references: [id])
+  linkedTask     Task?          @relation(fields: [linkedTaskId], references: [id])
+
+  @@map("budget_lines")
+}
+
+enum BookingStatus {
+  requested
+  confirmed
+  cancelled
+  completed
+}
+
+/// [FUTURE — Phase 2] Built now per explicit request. Connects event_groups,
+/// vendors, and tasks together for real vendor bookings.
+model Booking {
+  id                 String        @id @default(uuid()) @db.Uuid
+  eventGroupId       String        @map("event_group_id") @db.Uuid
+  vendorId           String        @map("vendor_id") @db.Uuid
+  taskId             String?       @map("task_id") @db.Uuid
+  status             BookingStatus
+  agreedPrice        Decimal       @map("agreed_price") @db.Decimal(12, 2)
+  contractDocumentId String?       @map("contract_document_id") @db.Uuid
+  createdAt          DateTime      @default(now()) @map("created_at")
+
+  eventGroup       EventGroup @relation(fields: [eventGroupId], references: [id])
+  vendor           Vendor     @relation(fields: [vendorId], references: [id])
+  task             Task?      @relation(fields: [taskId], references: [id])
+  contractDocument Document?  @relation(fields: [contractDocumentId], references: [id])
+  payments         Payment[]
+
+  @@map("bookings")
+}
+
+enum PaymentMilestoneType {
+  advance
+  midpoint
+  final
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  overdue
+}
+
+/// [FUTURE — Phase 2] Built now per explicit request.
+model Payment {
+  id            String               @id @default(uuid()) @db.Uuid
+  bookingId     String               @map("booking_id") @db.Uuid
+  milestoneType PaymentMilestoneType @map("milestone_type")
+  amount        Decimal              @db.Decimal(12, 2)
+  dueDate       DateTime             @map("due_date") @db.Date
+  paidAt        DateTime?            @map("paid_at")
+  status        PaymentStatus
+
+  booking Booking @relation(fields: [bookingId], references: [id])
+
+  @@map("payments")
+}
+
+// =============================================================================
+// 6. Vendor Availability & Trust
+// =============================================================================
+
+enum VendorAvailabilityStatus {
+  available
+  booked
+  blocked
+}
+
+/// [FUTURE — Phase 2] Built now per explicit request. Calendar-style availability.
+model VendorAvailability {
+  id       String                   @id @default(uuid()) @db.Uuid
+  vendorId String                   @map("vendor_id") @db.Uuid
+  date     DateTime                 @db.Date
+  status   VendorAvailabilityStatus
+
+  vendor Vendor @relation(fields: [vendorId], references: [id])
+
+  @@map("vendor_availability")
+}
+
+/// [FUTURE — Phase 2/3] Built now per explicit request.
+model Review {
+  id           String   @id @default(uuid()) @db.Uuid
+  vendorId     String   @map("vendor_id") @db.Uuid
+  eventGroupId String   @map("event_group_id") @db.Uuid
+  rating       Int
+  comment      String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  vendor     Vendor     @relation(fields: [vendorId], references: [id])
+  eventGroup EventGroup @relation(fields: [eventGroupId], references: [id])
+
+  @@map("reviews")
+}
+
+// =============================================================================
+// 7. Legal & Documentation
+// =============================================================================
+
+enum DocumentType {
+  id_proof
+  vendor_contract
+  payment_receipt
+  marriage_registration_doc
+  other
+}
+
+/// [SCAFFOLD] Worth creating early since file storage (S3-style) is already
+/// part of the stack for vendor portfolio photos.
+model Document {
+  id           String       @id @default(uuid()) @db.Uuid
+  eventGroupId String       @map("event_group_id") @db.Uuid
+  documentType DocumentType @map("document_type")
+  fileUrl      String       @map("file_url")
+  uploadedBy   String       @map("uploaded_by") @db.Uuid
+  uploadedAt   DateTime     @map("uploaded_at")
+
+  eventGroup EventGroup @relation(fields: [eventGroupId], references: [id])
+  bookings   Booking[]
+
+  @@map("documents")
+}
+
+/// [FUTURE] Doc flags this as possibly not needing its own table — "just
+/// another flavor of task_templates, scoped to a legal category." Built now
+/// per explicit request with a minimal inferred shape (not detailed in the
+/// source doc): region-specific marriage registration requirements.
+model LegalChecklistItem {
+  id                  String   @id @default(uuid()) @db.Uuid
+  region              String?
+  religionOrTradition String?  @map("religion_or_tradition")
+  requirementKey      String   @map("requirement_key")
+  name                String
+  description         String?
+  isMandatory         Boolean  @default(true) @map("is_mandatory")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  @@map("legal_checklist_items")
+}
+
+// =============================================================================
+// 8. Post-Event
+// =============================================================================
+
+/// [FUTURE] Built now per explicit request. Shareable digital album — photo/video delivery tracking.
+model EventMedia {
+  id                 String   @id @default(uuid()) @db.Uuid
+  eventGroupId       String   @map("event_group_id") @db.Uuid
+  mediaUrl           String   @map("media_url")
+  uploadedByVendorId String?  @map("uploaded_by_vendor_id") @db.Uuid
+  uploadedAt         DateTime @map("uploaded_at")
+
+  eventGroup       EventGroup @relation(fields: [eventGroupId], references: [id])
+  uploadedByVendor Vendor?    @relation(fields: [uploadedByVendorId], references: [id])
+
+  @@map("event_media")
+}
+
+enum ThankYouStatus {
+  pending
+  sent
+}
+
+/// [FUTURE] Built now per explicit request.
+model ThankYouNote {
+  id           String         @id @default(uuid()) @db.Uuid
+  eventGroupId String         @map("event_group_id") @db.Uuid
+  guestId      String         @map("guest_id") @db.Uuid
+  status       ThankYouStatus
+
+  eventGroup EventGroup @relation(fields: [eventGroupId], references: [id])
+  guest      Guest      @relation(fields: [guestId], references: [id])
+
+  @@map("thank_you_notes")
+}
+
+// =============================================================================
+// 9. Notifications & Messaging
+// =============================================================================
+
+enum NotificationRecipientType {
+  organizer
+  vendor
+  guest
+}
+
+enum NotificationChannel {
+  whatsapp
+  push
+  sms
+}
+
+enum NotificationStatus {
+  sent
+  delivered
+  failed
+}
+
+/// [ACTIVE] Every WhatsApp/push message sent, for debugging delivery issues
+/// and future analytics on what reminder patterns actually get responses.
+model NotificationLog {
+  id            String                    @id @default(uuid()) @db.Uuid
+  recipientType NotificationRecipientType @map("recipient_type")
+  recipientId   String                    @map("recipient_id") @db.Uuid
+  channel       NotificationChannel
+  messageKey    String                    @map("message_key")
+  status        NotificationStatus
+  scheduledAt   DateTime                  @map("scheduled_at")
+  sentAt        DateTime?                 @map("sent_at")
+
+  @@map("notification_logs")
+}
+
+// =============================================================================
+// 10. Multi-Language Support
+// =============================================================================
+
+/// [SCAFFOLD] Not populated with real translations in Phase 1 — but every
+/// user-facing generated string already goes through a _key rather than
+/// hardcoded English text, so this table resolves keys into other languages later.
+model TranslationString {
+  id           String @id @default(uuid()) @db.Uuid
+  stringKey    String @map("string_key")
+  languageCode String @map("language_code")
+  text         String
+
+  @@map("translation_strings")
+}
+
+// =============================================================================
+// 11. Create-or-Delegate Pipelines (Module 3 in the vision doc)
+// =============================================================================
+
+enum ProductionPipelineStatus {
+  pending
+  assigned
+  in_production
+  delivered
+  cancelled
+}
+
+/// [FUTURE] Doc mentions this only by name in the module-mapping table:
+/// "links tasks ↔ vendors, with a status progression field." Built now per
+/// explicit request with a minimal inferred shape (not detailed in the source doc).
+model ProductionPipelineItem {
+  id        String                   @id @default(uuid()) @db.Uuid
+  taskId    String                   @map("task_id") @db.Uuid
+  vendorId  String?                  @map("vendor_id") @db.Uuid
+  status    ProductionPipelineStatus
+  notes     String?
+  createdAt DateTime                 @default(now()) @map("created_at")
+  updatedAt DateTime                 @updatedAt @map("updated_at")
+
+  task   Task    @relation(fields: [taskId], references: [id])
+  vendor Vendor? @relation(fields: [vendorId], references: [id])
+
+  @@map("production_pipeline_items")
+}
