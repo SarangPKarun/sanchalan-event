@@ -1,29 +1,28 @@
-import { Slot, Redirect } from "expo-router";
-import { ActivityIndicator, View } from "react-native";
+import { Stack } from "expo-router";
 import { AuthProvider, useAuth } from "../lib/auth-context";
+import { SplashScreenController } from "../lib/splash";
 
-function Gate() {
+function RootNavigator() {
   const { state } = useAuth();
 
-  if (state === "loading") {
-    return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
+  return (
+    <Stack>
+      <Stack.Protected guard={state === "authed"}>
+        <Stack.Screen name="(app)" />
+      </Stack.Protected>
 
-  if (state === "unauthed") {
-    return <Redirect href="/(auth)/phone" />;
-  }
-
-  return <Slot />;
+      <Stack.Protected guard={state === "unauthed"}>
+        <Stack.Screen name="(auth)" />
+      </Stack.Protected>
+    </Stack>
+  );
 }
 
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <Gate />
+      <SplashScreenController />
+      <RootNavigator />
     </AuthProvider>
   );
 }
