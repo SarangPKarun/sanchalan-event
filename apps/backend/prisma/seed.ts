@@ -1,6 +1,11 @@
 import { PrismaClient, type TaskOwnerType } from "@prisma/client";
+import { randomBytes } from "node:crypto";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+
+const SEED_ADMIN_EMAIL = "admin@sanchalan.internal";
+const BCRYPT_ROUNDS = 10;
 
 const CATEGORY_KEYS = [
   "venue",
@@ -182,6 +187,34 @@ async function main() {
   console.log(
     `Seeded ${CATEGORY_KEYS.length} task categories and ${TEMPLATES.length} task templates.`
   );
+
+  await seedAdmin();
+}
+
+async function seedAdmin(): Promise<void> {
+  const existing = await prisma.admin.findUnique({ where: { email: SEED_ADMIN_EMAIL } });
+  if (existing) {
+    console.log(`Admin already seeded (${SEED_ADMIN_EMAIL}).`);
+    return;
+  }
+
+  const password = randomBytes(18).toString("base64url");
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+  await prisma.admin.create({
+    data: {
+      name: "Seed Admin",
+      email: SEED_ADMIN_EMAIL,
+      passwordHash,
+      role: "super_admin",
+    },
+  });
+
+  console.log("=".repeat(72));
+  console.log(`Seeded admin account — save this password now, it will not be shown again:`);
+  console.log(`  email:    ${SEED_ADMIN_EMAIL}`);
+  console.log(`  password: ${password}`);
+  console.log("=".repeat(72));
 }
 
 main()

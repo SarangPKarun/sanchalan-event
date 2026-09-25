@@ -14,7 +14,8 @@ pnpm workspace monorepo:
 apps/
   backend/          Express + TypeScript API, Prisma schema/migrations
   mobile/            Expo (React Native) app
-  admin/             Internal admin app (not yet scaffolded)
+  admin/             Internal admin web app (Vite + React + TS) — vendor
+                     review queue, email/password login for the team
 packages/
   shared-types/      TypeScript interfaces shared by backend and mobile —
                      one definition of what an EventGroup, Task, etc. look
@@ -41,6 +42,10 @@ cp .env.example apps/backend/.env
 # 4. Apply the database schema
 cd apps/backend
 pnpm prisma:migrate
+
+# 5. Seed reference data (task templates, plus a one-time admin account —
+#    see "Testing the admin portal" below)
+pnpm exec prisma db seed
 ```
 
 Then, from each app:
@@ -51,6 +56,9 @@ cd apps/backend && pnpm prisma:generate   # regenerate the Prisma client after s
 
 # Mobile
 cd apps/mobile && pnpm start              # then press i / a, or scan the QR code in Expo Go
+
+# Admin
+cd apps/admin && cp .env.example .env.local && pnpm dev   # http://localhost:5173
 ```
 
 ## Testing phone + OTP login
@@ -87,6 +95,42 @@ Other things worth knowing while testing:
 - OTP requests are rate-limited to **3 per phone number per 10 minutes**,
   and each code expires after **5 minutes** with a **5-attempt** limit —
   use a different phone number if you get locked out while testing.
+
+## Testing the admin portal
+
+The admin team (not organizers or vendors) logs in with email + password —
+the one deliberate exception to phone-only auth, since admins are internal
+staff, not mobile users.
+
+```bash
+# Terminal 1 — backend
+cd apps/backend && pnpm dev
+
+# Terminal 2 — admin app
+cd apps/admin && pnpm dev   # http://localhost:5173
+```
+
+Running `pnpm exec prisma db seed` in `apps/backend` (see Setup step 5) seeds
+one admin account with a fixed email and a **randomly generated password
+printed once to the terminal** — it is never committed to git and won't be
+shown again, so copy it down when you see it:
+
+```
+========================================================================
+Seeded admin account — save this password now, it will not be shown again:
+  email:    admin@sanchalan.internal
+  password: <random>
+========================================================================
+```
+
+Re-running the seed script is safe — it skips creating the admin if that
+email already exists, so it won't rotate the password out from under you.
+
+Log in at `http://localhost:5173/login` to reach the vendor review queue
+(pending review / published / rejected tabs, with Approve/Reject actions on
+each vendor's detail page). Approve/Reject is restricted to the `super_admin`
+and `vendor_reviewer` admin roles — a `support` admin can view the queue but
+not act on it.
 
 ## Database
 

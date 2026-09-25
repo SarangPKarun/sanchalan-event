@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import type { AuthRole } from "@sanchalan/shared-types";
+import type { AdminRole, AuthRole } from "@sanchalan/shared-types";
 import { verifyAccessToken } from "../lib/jwt.js";
 
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
@@ -10,7 +10,11 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   }
   try {
     const payload = verifyAccessToken(header.slice("Bearer ".length));
-    req.auth = { userId: payload.sub, role: payload.role };
+    req.auth = {
+      userId: payload.sub,
+      role: payload.role,
+      ...(payload.adminRole ? { adminRole: payload.adminRole } : {}),
+    };
     next();
   } catch {
     res.status(401).json({ error: "Invalid or expired token" });
@@ -20,6 +24,16 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
 export function requireRole(...roles: AuthRole[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.auth || !roles.includes(req.auth.role)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    next();
+  };
+}
+
+export function requireAdminRole(...roles: AdminRole[]) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.auth?.adminRole || !roles.includes(req.auth.adminRole)) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }

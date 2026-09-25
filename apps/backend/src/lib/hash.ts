@@ -11,6 +11,14 @@ export async function verifyOtpHash(otp: string, hash: string): Promise<boolean>
   return bcrypt.compare(otp, hash);
 }
 
+// Admin password — same shape as an OTP hash, well under bcrypt's 72-byte limit.
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, BCRYPT_ROUNDS);
+}
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash);
+}
+
 // High-entropy secret (signed JWT refresh token, routinely 200+ bytes). bcrypt
 // silently truncates input at 72 bytes, so hashing the raw JWT directly would
 // only ever validate its first ~72 bytes. SHA-256 the token to a fixed 64-char

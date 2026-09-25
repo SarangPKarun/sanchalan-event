@@ -21,6 +21,11 @@ const envSchema = z.object({
   LLM_PROVIDER: z.enum(["anthropic", "openai", "google"]),
   LLM_MODEL: z.string().min(1),
   LLM_API_KEY: z.string().min(1),
+
+  // Origin of the admin web app (apps/admin) — the only browser client this
+  // API serves; organizer/vendor traffic comes from the native mobile app,
+  // which isn't subject to CORS.
+  ADMIN_APP_ORIGIN: z.string().default("http://localhost:5173"),
 });
 
 export const env = envSchema.parse(process.env);

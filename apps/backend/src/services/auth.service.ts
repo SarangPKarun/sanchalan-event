@@ -1,4 +1,4 @@
-import type { AuthRole } from "@sanchalan/shared-types";
+import type { AdminRole, AuthRole } from "@sanchalan/shared-types";
 import { env } from "../lib/env.js";
 import { prisma } from "../lib/prisma.js";
 import { generateOtp } from "../lib/otp.js";
@@ -117,7 +117,21 @@ export async function refreshAccessToken(refreshToken: string) {
   const matches = await verifyRefreshTokenHash(refreshToken, row.tokenHash);
   if (!matches) throw new AppError(401, "Invalid refresh token");
 
-  return { accessToken: signAccessToken({ sub: row.userId, role: row.role as AuthRole }) };
+  const role = row.role as AuthRole;
+  let adminRole: AdminRole | undefined;
+  if (role === "admin") {
+    const admin = await prisma.admin.findUnique({ where: { id: row.userId } });
+    if (!admin) throw new AppError(401, "Refresh token revoked or expired");
+    adminRole = admin.role;
+  }
+
+  return {
+    accessToken: signAccessToken({
+      sub: row.userId,
+      role,
+      ...(adminRole ? { adminRole } : {}),
+    }),
+  };
 }
 
 export async function logout(refreshToken: string): Promise<void> {
