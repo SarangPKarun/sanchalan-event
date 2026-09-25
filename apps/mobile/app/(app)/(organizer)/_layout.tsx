@@ -39,6 +39,8 @@ function OrganizerNavigator() {
 
       <Stack.Protected guard={data.status === "ready"}>
         <Stack.Screen name="event-home" />
+        <Stack.Screen name="vendors" />
+        <Stack.Screen name="vendor-detail" />
       </Stack.Protected>
     </Stack>
   );

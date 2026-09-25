@@ -24,6 +24,22 @@ const CATEGORY_KEYS = [
 
 type CategoryKey = (typeof CATEGORY_KEYS)[number];
 
+// Vendor categories describe a vendor *business type* a family would search
+// for — a subset of CATEGORY_KEYS, dropping ones that only make sense as
+// planning-task categories (legal_documentation, guest_logistics).
+const VENDOR_CATEGORY_KEYS = [
+  "venue",
+  "catering",
+  "decor",
+  "photography",
+  "attire",
+  "invitations",
+  "music_entertainment",
+  "priest_officiant",
+  "transport",
+  "misc",
+] as const;
+
 interface TemplateSeed {
   taskKey: string;
   categoryKey: CategoryKey;
@@ -188,7 +204,19 @@ async function main() {
     `Seeded ${CATEGORY_KEYS.length} task categories and ${TEMPLATES.length} task templates.`
   );
 
+  await seedVendorCategories();
   await seedAdmin();
+}
+
+async function seedVendorCategories(): Promise<void> {
+  for (const categoryKey of VENDOR_CATEGORY_KEYS) {
+    await prisma.vendorCategory.upsert({
+      where: { categoryKey },
+      update: { applicableEventTypes: ["wedding"] },
+      create: { categoryKey, applicableEventTypes: ["wedding"] },
+    });
+  }
+  console.log(`Seeded ${VENDOR_CATEGORY_KEYS.length} vendor categories.`);
 }
 
 async function seedAdmin(): Promise<void> {

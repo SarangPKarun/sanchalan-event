@@ -11,6 +11,7 @@ import {
   Platform,
 } from "react-native";
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
+import { router } from "expo-router";
 import { api } from "../../../lib/api";
 import { useAuth } from "../../../lib/auth-context";
 import { useOrganizerData } from "../../../lib/organizer-context";
@@ -335,6 +336,13 @@ export default function EventHomeScreen() {
       <Text style={styles.title}>{eventGroup.name}</Text>
       <Text style={styles.subtitle}>{eventGroup.primaryDate}</Text>
 
+      <Pressable
+        onPress={() => router.push({ pathname: "/(app)/(organizer)/vendors" })}
+        style={[styles.button, styles.browseVendorsButton]}
+      >
+        <Text style={styles.buttonText}>Browse vendors</Text>
+      </Pressable>
+
       <Text style={styles.sectionTitle}>Budget breakdown</Text>
       {eventGroup.budgetCategories.map((bc) => (
         <Pressable key={bc.id} onPress={() => openEditModal(bc)} style={styles.budgetRow}>
@@ -618,6 +626,7 @@ const styles = StyleSheet.create({
   button: { backgroundColor: "#111", borderRadius: 8, padding: 14, alignItems: "center", marginTop: 8 },
   buttonDisabled: { opacity: 0.4 },
   buttonText: { color: "#fff", fontWeight: "600" },
+  browseVendorsButton: { marginTop: 4 },
   logoutButton: { marginTop: 24 },
   modal: { flexGrow: 1, backgroundColor: "#fff", padding: 24, paddingTop: 64, gap: 12 },
   modalTitle: { fontSize: 18, fontWeight: "600", textAlign: "center", textTransform: "capitalize" },

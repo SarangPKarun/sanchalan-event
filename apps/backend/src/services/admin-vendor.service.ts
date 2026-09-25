@@ -1,14 +1,12 @@
 import type { VendorStatus } from "@sanchalan/shared-types";
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../lib/errors.js";
+import { VENDOR_WITH_PORTFOLIO_INCLUDE } from "./vendor-query.helpers.js";
 
 export async function listVendors(status?: VendorStatus) {
   return prisma.vendor.findMany({
     where: status ? { status } : {},
-    include: {
-      vendorVendorCategories: { include: { vendorCategory: true } },
-      portfolioItems: { orderBy: { displayOrder: "asc" } },
-    },
+    include: VENDOR_WITH_PORTFOLIO_INCLUDE,
     orderBy: [{ submittedAt: "desc" }, { createdAt: "desc" }],
   });
 }
