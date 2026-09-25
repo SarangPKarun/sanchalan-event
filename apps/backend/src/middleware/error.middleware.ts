@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { ZodError } from "zod";
-import { AuthError } from "../services/auth.service.js";
+import { AppError } from "../lib/errors.js";
 
 export function errorMiddleware(
   err: unknown,
@@ -12,8 +12,11 @@ export function errorMiddleware(
     res.status(400).json({ error: "Validation failed", details: err.issues });
     return;
   }
-  if (err instanceof AuthError) {
-    res.status(err.status).json({ error: err.message });
+  if (err instanceof AppError) {
+    res.status(err.status).json({
+      error: err.message,
+      ...(err.details !== undefined ? { details: err.details } : {}),
+    });
     return;
   }
   console.error(err);

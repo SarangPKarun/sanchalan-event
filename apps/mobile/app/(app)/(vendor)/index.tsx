@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import { StyleSheet, Text, View, Pressable } from "react-native";
-import { useAuth } from "../../lib/auth-context";
+import { useAuth } from "../../../lib/auth-context";
 
 export default function AppHome() {
   const { signOut } = useAuth();

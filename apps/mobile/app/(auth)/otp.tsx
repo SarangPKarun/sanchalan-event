@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { api } from "../../lib/api";
 import { useAuth } from "../../lib/auth-context";
 import type { Role } from "../../lib/types";
@@ -28,8 +28,10 @@ export default function OtpEntryScreen() {
     setError(null);
     try {
       const { data } = await api.post("/auth/otp/verify", { phoneNumber, otp, role });
-      await signIn({ accessToken: data.accessToken, refreshToken: data.refreshToken });
-      router.replace("/(app)");
+      // No manual navigation needed — Stack.Protected at the root (auth
+      // state), (app) (role), and (organizer) (profile/event status) levels
+      // all react to signIn()'s state change and cascade to the right screen.
+      await signIn({ accessToken: data.accessToken, refreshToken: data.refreshToken }, data.role);
     } catch {
       setError("That code is wrong or expired.");
     } finally {

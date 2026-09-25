@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma.js";
 import { generateOtp } from "../lib/otp.js";
 import { hashOtp, verifyOtpHash, hashRefreshToken, verifyRefreshTokenHash } from "../lib/hash.js";
 import { sendOtpSms } from "../lib/msg91.js";
+import { AppError } from "../lib/errors.js";
 import {
   signAccessToken,
   signRefreshToken,
@@ -11,21 +12,13 @@ import {
   decodeRefreshTokenForRevocation,
 } from "../lib/jwt.js";
 
-export class AuthError extends Error {
-  status: number;
-  constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
-  }
-}
-
 export async function requestOtp(phoneNumber: string, role: AuthRole) {
   const windowStart = new Date(Date.now() - env.OTP_REQUEST_WINDOW_MINUTES * 60_000);
   const recentCount = await prisma.otpRequest.count({
     where: { phoneNumber, createdAt: { gte: windowStart } },
   });
   if (recentCount >= env.OTP_MAX_REQUESTS_PER_WINDOW) {
-    throw new AuthError(429, "Too many OTP requests. Please try again later.");
+    throw new AppError(429, "Too many OTP requests. Please try again later.");
   }
 
   const existing =
@@ -57,13 +50,13 @@ export async function verifyOtp(phoneNumber: string, otp: string, role: AuthRole
     orderBy: { createdAt: "desc" },
   });
 
-  if (!otpRow) throw new AuthError(400, "No OTP request found for this phone number");
-  if (otpRow.consumedAt) throw new AuthError(400, "OTP already used. Please request a new one.");
+  if (!otpRow) throw new AppError(400, "No OTP request found for this phone number");
+  if (otpRow.consumedAt) throw new AppError(400, "OTP already used. Please request a new one.");
   if (otpRow.attemptCount >= env.OTP_MAX_VERIFY_ATTEMPTS) {
-    throw new AuthError(400, "Too many incorrect attempts. Please request a new OTP.");
+    throw new AppError(400, "Too many incorrect attempts. Please request a new OTP.");
   }
   if (otpRow.expiresAt < new Date()) {
-    throw new AuthError(400, "OTP expired. Please request a new one.");
+    throw new AppError(400, "OTP expired. Please request a new one.");
   }
 
   const isValid = await verifyOtpHash(otp, otpRow.otpHash);
@@ -72,7 +65,7 @@ export async function verifyOtp(phoneNumber: string, otp: string, role: AuthRole
       where: { id: otpRow.id },
       data: { attemptCount: { increment: 1 } },
     });
-    throw new AuthError(400, "Invalid OTP");
+    throw new AppError(400, "Invalid OTP");
   }
 
   await prisma.otpRequest.update({ where: { id: otpRow.id }, data: { consumedAt: new Date() } });
@@ -113,16 +106,16 @@ export async function refreshAccessToken(refreshToken: string) {
   try {
     payload = verifyRefreshToken(refreshToken);
   } catch {
-    throw new AuthError(401, "Invalid or expired refresh token");
+    throw new AppError(401, "Invalid or expired refresh token");
   }
 
   const row = await prisma.refreshToken.findUnique({ where: { id: payload.jti } });
   if (!row || row.revokedAt || row.expiresAt < new Date()) {
-    throw new AuthError(401, "Refresh token revoked or expired");
+    throw new AppError(401, "Refresh token revoked or expired");
   }
 
   const matches = await verifyRefreshTokenHash(refreshToken, row.tokenHash);
-  if (!matches) throw new AuthError(401, "Invalid refresh token");
+  if (!matches) throw new AppError(401, "Invalid refresh token");
 
   return { accessToken: signAccessToken({ sub: row.userId, role: row.role as AuthRole }) };
 }
@@ -132,7 +125,7 @@ export async function logout(refreshToken: string): Promise<void> {
   try {
     payload = decodeRefreshTokenForRevocation(refreshToken);
   } catch {
-    throw new AuthError(401, "Invalid refresh token");
+    throw new AppError(401, "Invalid refresh token");
   }
   await prisma.refreshToken.updateMany({
     where: { id: payload.jti, revokedAt: null },

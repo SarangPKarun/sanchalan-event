@@ -1,13 +1,14 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { api } from "./api";
-import { getRefreshToken, setTokens, clearTokens } from "./authStorage";
-import type { AuthTokens } from "./types";
+import { getRefreshToken, setTokens, clearTokens, getRole, setRole as persistRole } from "./authStorage";
+import type { AuthTokens, Role } from "./types";
 
 type AuthState = "loading" | "authed" | "unauthed";
 
 type AuthContextValue = {
   state: AuthState;
-  signIn: (tokens: AuthTokens) => Promise<void>;
+  role: Role | null;
+  signIn: (tokens: AuthTokens, role: Role) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -15,6 +16,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>("loading");
+  const [role, setRole] = useState<Role | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -26,6 +28,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { data } = await api.post("/auth/refresh", { refreshToken });
         await setTokens({ accessToken: data.accessToken, refreshToken });
+        // /auth/refresh only returns a new accessToken — role isn't
+        // re-issued there, so it's read back from where signIn persisted it.
+        setRole(await getRole());
         setState("authed");
       } catch {
         // Covers both "refresh token invalid/revoked" and network errors.
@@ -38,8 +43,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
-  async function signIn(tokens: AuthTokens) {
+  async function signIn(tokens: AuthTokens, newRole: Role) {
     await setTokens(tokens);
+    await persistRole(newRole);
+    setRole(newRole);
     setState("authed");
   }
 
@@ -51,11 +58,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // best-effort — clear local state regardless
     } finally {
       await clearTokens();
+      setRole(null);
       setState("unauthed");
     }
   }
 
-  return <AuthContext.Provider value={{ state, signIn, signOut }}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ state, role, signIn, signOut }}>{children}</AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
