@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const dateOnlySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "primaryDate must be YYYY-MM-DD");
+export const dateOnlySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD");
 
 export const createEventGroupSchema = z.object({
   eventType: z.enum(["wedding", "birthday", "corporate", "religious", "engagement_only", "custom"]),

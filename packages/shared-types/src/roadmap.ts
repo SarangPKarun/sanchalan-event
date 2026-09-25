@@ -13,3 +13,25 @@ export interface GenerateRoadmapResponse {
 export interface EventGroupWithRoadmap extends EventGroupWithDetails {
   tasks: TaskWithDependencies[];
 }
+
+export interface TaskWithFullDependencies extends TaskWithDependencies {
+  dependentTaskIds: string[];
+}
+
+export interface ListEventGroupTasksResponse {
+  tasks: TaskWithFullDependencies[];
+}
+
+export interface UpdateTaskBody {
+  status?: "not_started" | "in_progress" | "done";
+  dueDate?: string | null;
+  name?: string;
+  description?: string | null;
+}
+
+export interface CreateTaskBody {
+  name: string;
+  category: string; // taskCategoryId (uuid) or categoryKey
+  dueDate: string;
+  dependencyTaskIds?: string[];
+}

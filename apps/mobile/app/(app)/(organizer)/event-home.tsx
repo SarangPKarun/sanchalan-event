@@ -8,22 +8,38 @@ import {
   ScrollView,
   Modal,
   TextInput,
+  Platform,
 } from "react-native";
+import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { api } from "../../../lib/api";
 import { useAuth } from "../../../lib/auth-context";
 import { useOrganizerData } from "../../../lib/organizer-context";
 import type {
   EventGroupWithRoadmap,
-  TaskWithDependencies,
+  TaskWithFullDependencies,
+  ListEventGroupTasksResponse,
   BudgetCategoryMutationResponse,
   BudgetCategory,
 } from "@sanchalan/shared-types";
+
+function toDateOnly(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+const NORMAL_STATUSES = ["not_started", "in_progress", "done"] as const;
+type NormalStatus = (typeof NORMAL_STATUSES)[number];
+const TASK_STATUSES: { value: NormalStatus; label: string }[] = [
+  { value: "not_started", label: "Not started" },
+  { value: "in_progress", label: "In progress" },
+  { value: "done", label: "Done" },
+];
 
 export default function EventHomeScreen() {
   const { signOut } = useAuth();
   const { eventGroupId } = useOrganizerData() as { eventGroupId: string };
 
   const [eventGroup, setEventGroup] = useState<EventGroupWithRoadmap | null>(null);
+  const [tasks, setTasks] = useState<TaskWithFullDependencies[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
@@ -40,6 +56,23 @@ export default function EventHomeScreen() {
   const [addSaving, setAddSaving] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
+  const [selectedTask, setSelectedTask] = useState<TaskWithFullDependencies | null>(null);
+  const [editTaskName, setEditTaskName] = useState("");
+  const [editTaskDescription, setEditTaskDescription] = useState("");
+  const [editTaskDueDate, setEditTaskDueDate] = useState<Date | null>(null);
+  const [editTaskStatus, setEditTaskStatus] = useState<NormalStatus>("not_started");
+  const [showEditIosPicker, setShowEditIosPicker] = useState(false);
+  const [taskSaving, setTaskSaving] = useState(false);
+  const [taskSaveError, setTaskSaveError] = useState<string | null>(null);
+
+  const [addingTask, setAddingTask] = useState(false);
+  const [newTaskName, setNewTaskName] = useState("");
+  const [newTaskCategory, setNewTaskCategory] = useState("");
+  const [newTaskDueDate, setNewTaskDueDate] = useState<Date | null>(null);
+  const [showAddIosPicker, setShowAddIosPicker] = useState(false);
+  const [addTaskSaving, setAddTaskSaving] = useState(false);
+  const [addTaskError, setAddTaskError] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     try {
       const { data } = await api.get<EventGroupWithRoadmap>(`/event-groups/${eventGroupId}`);
@@ -49,9 +82,22 @@ export default function EventHomeScreen() {
     }
   }, [eventGroupId]);
 
+  const loadTasks = useCallback(async () => {
+    try {
+      const { data } = await api.get<ListEventGroupTasksResponse>(
+        `/event-groups/${eventGroupId}/tasks`
+      );
+      setTasks(data.tasks);
+    } catch {
+      // Keep whatever task list we already have on a transient failure —
+      // the main `error` state already covers the primary event load.
+    }
+  }, [eventGroupId]);
+
   useEffect(() => {
     load();
-  }, [load]);
+    loadTasks();
+  }, [load, loadTasks]);
 
   async function handleGenerateRoadmap() {
     if (generating) return;
@@ -60,6 +106,7 @@ export default function EventHomeScreen() {
     try {
       await api.post(`/event-groups/${eventGroupId}/generate-roadmap`);
       await load();
+      await loadTasks();
     } catch {
       setGenerateError("Could not generate your roadmap. Please try again.");
     } finally {
@@ -133,21 +180,139 @@ export default function EventHomeScreen() {
     }
   }
 
+  function openTaskDetail(task: TaskWithFullDependencies) {
+    setSelectedTask(task);
+    setEditTaskName(task.name);
+    setEditTaskDescription(task.description ?? "");
+    setEditTaskDueDate(task.dueDate ? new Date(task.dueDate) : null);
+    setEditTaskStatus(
+      (NORMAL_STATUSES as readonly string[]).includes(task.status)
+        ? (task.status as NormalStatus)
+        : "not_started"
+    );
+    setTaskSaveError(null);
+  }
+
+  function openTaskDueDatePicker() {
+    if (Platform.OS === "android") {
+      DateTimePickerAndroid.open({
+        value: editTaskDueDate ?? new Date(),
+        mode: "date",
+        onChange: (_event, selected) => {
+          if (selected) setEditTaskDueDate(selected);
+        },
+      });
+    } else {
+      setShowEditIosPicker(true);
+    }
+  }
+
+  async function handleSaveTask() {
+    if (!selectedTask || taskSaving) return;
+    if (!editTaskName.trim()) {
+      setTaskSaveError("Enter a task name.");
+      return;
+    }
+    setTaskSaving(true);
+    setTaskSaveError(null);
+    try {
+      await api.patch(`/tasks/${selectedTask.id}`, {
+        status: editTaskStatus,
+        dueDate: editTaskDueDate ? toDateOnly(editTaskDueDate) : null,
+        name: editTaskName.trim(),
+        description: editTaskDescription.trim() || null,
+      });
+      setSelectedTask(null);
+      await loadTasks();
+    } catch {
+      setTaskSaveError("Could not save. Please try again.");
+    } finally {
+      setTaskSaving(false);
+    }
+  }
+
+  async function handleMarkNotApplicable() {
+    if (!selectedTask || taskSaving) return;
+    setTaskSaving(true);
+    setTaskSaveError(null);
+    try {
+      await api.delete(`/tasks/${selectedTask.id}`);
+      setSelectedTask(null);
+      await loadTasks();
+    } catch {
+      setTaskSaveError("Could not update. Please try again.");
+    } finally {
+      setTaskSaving(false);
+    }
+  }
+
+  function openAddTaskModal() {
+    setNewTaskName("");
+    setNewTaskCategory(eventGroup?.budgetCategories[0]?.categoryKey ?? "");
+    setNewTaskDueDate(null);
+    setAddTaskError(null);
+    setAddingTask(true);
+  }
+
+  function openNewTaskDueDatePicker() {
+    if (Platform.OS === "android") {
+      DateTimePickerAndroid.open({
+        value: newTaskDueDate ?? new Date(),
+        mode: "date",
+        onChange: (_event, selected) => {
+          if (selected) setNewTaskDueDate(selected);
+        },
+      });
+    } else {
+      setShowAddIosPicker(true);
+    }
+  }
+
+  async function handleSaveNewTask() {
+    if (addTaskSaving) return;
+    if (!newTaskName.trim()) {
+      setAddTaskError("Enter a task name.");
+      return;
+    }
+    if (!newTaskCategory) {
+      setAddTaskError("Choose a category.");
+      return;
+    }
+    if (!newTaskDueDate) {
+      setAddTaskError("Choose a due date.");
+      return;
+    }
+    setAddTaskSaving(true);
+    setAddTaskError(null);
+    try {
+      await api.post(`/event-groups/${eventGroupId}/tasks`, {
+        name: newTaskName.trim(),
+        category: newTaskCategory,
+        dueDate: toDateOnly(newTaskDueDate),
+      });
+      setAddingTask(false);
+      await loadTasks();
+    } catch {
+      setAddTaskError("Could not add task. Please try again.");
+    } finally {
+      setAddTaskSaving(false);
+    }
+  }
+
   const groupedTasks = useMemo(() => {
-    if (!eventGroup) return [];
-    const groups = new Map<string, TaskWithDependencies[]>();
-    for (const task of eventGroup.tasks) {
+    const groups = new Map<string, TaskWithFullDependencies[]>();
+    for (const task of tasks) {
       const list = groups.get(task.categoryKey) ?? [];
       list.push(task);
       groups.set(task.categoryKey, list);
     }
     return Array.from(groups.entries())
-      .map(([categoryKey, tasks]) => ({
+      .map(([categoryKey, categoryTasks]) => ({
         categoryKey,
-        tasks: [...tasks].sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? "")),
+        tasks: [...categoryTasks].sort((a, b) => (a.dueDate ?? "").localeCompare(b.dueDate ?? "")),
       }))
       .sort((a, b) => a.categoryKey.localeCompare(b.categoryKey));
-  }, [eventGroup]);
+  }, [tasks]);
 
   if (error) {
     return (
@@ -183,6 +348,9 @@ export default function EventHomeScreen() {
       {budgetWarning ? <Text style={styles.warning}>{budgetWarning}</Text> : null}
 
       <Text style={styles.sectionTitle}>Roadmap</Text>
+      <Pressable onPress={openAddTaskModal}>
+        <Text style={styles.addCategoryText}>+ Add task</Text>
+      </Pressable>
       {eventGroup.tasks.length === 0 ? (
         <>
           {generateError ? <Text style={styles.error}>{generateError}</Text> : null}
@@ -203,10 +371,10 @@ export default function EventHomeScreen() {
           <View key={group.categoryKey} style={styles.categoryGroup}>
             <Text style={styles.categoryHeader}>{group.categoryKey}</Text>
             {group.tasks.map((task) => (
-              <View key={task.id} style={styles.taskRow}>
+              <Pressable key={task.id} onPress={() => openTaskDetail(task)} style={styles.taskRow}>
                 <Text style={styles.taskName}>{task.name}</Text>
                 <Text style={styles.taskDueDate}>{task.dueDate ?? "—"}</Text>
-              </View>
+              </Pressable>
             ))}
           </View>
         ))
@@ -278,6 +446,136 @@ export default function EventHomeScreen() {
           </Pressable>
         </View>
       </Modal>
+
+      <Modal
+        visible={selectedTask !== null}
+        animationType="slide"
+        onRequestClose={() => setSelectedTask(null)}
+      >
+        <ScrollView contentContainerStyle={styles.modal}>
+          <Text style={styles.modalTitle}>Task</Text>
+          <TextInput
+            value={editTaskName}
+            onChangeText={setEditTaskName}
+            placeholder="Task name"
+            autoFocus
+            style={styles.input}
+          />
+          <TextInput
+            value={editTaskDescription}
+            onChangeText={setEditTaskDescription}
+            placeholder="Description (optional)"
+            multiline
+            style={[styles.input, styles.inputMultiline]}
+          />
+          <Pressable onPress={openTaskDueDatePicker} style={styles.input}>
+            <Text style={editTaskDueDate ? styles.dateText : styles.datePlaceholder}>
+              {editTaskDueDate ? toDateOnly(editTaskDueDate) : "No due date"}
+            </Text>
+          </Pressable>
+          {Platform.OS === "ios" && showEditIosPicker && (
+            <DateTimePicker
+              value={editTaskDueDate ?? new Date()}
+              mode="date"
+              display="inline"
+              onChange={(_event, selected) => {
+                setShowEditIosPicker(false);
+                if (selected) setEditTaskDueDate(selected);
+              }}
+            />
+          )}
+          <View style={styles.chipRow}>
+            {TASK_STATUSES.map((opt) => (
+              <Pressable
+                key={opt.value}
+                onPress={() => setEditTaskStatus(opt.value)}
+                style={[styles.chip, editTaskStatus === opt.value && styles.chipActive]}
+              >
+                <Text style={editTaskStatus === opt.value ? styles.chipTextActive : styles.chipText}>
+                  {opt.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          {taskSaveError ? <Text style={styles.error}>{taskSaveError}</Text> : null}
+          <Pressable
+            onPress={handleSaveTask}
+            disabled={taskSaving}
+            style={[styles.button, taskSaving && styles.buttonDisabled]}
+          >
+            {taskSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save</Text>}
+          </Pressable>
+          <Pressable
+            onPress={handleMarkNotApplicable}
+            disabled={taskSaving}
+            style={styles.closeButton}
+          >
+            <Text style={styles.dismissText}>Mark as not applicable</Text>
+          </Pressable>
+          <Pressable onPress={() => setSelectedTask(null)} style={styles.closeButton}>
+            <Text style={styles.closeButtonText}>Cancel</Text>
+          </Pressable>
+        </ScrollView>
+      </Modal>
+
+      <Modal
+        visible={addingTask}
+        animationType="slide"
+        onRequestClose={() => setAddingTask(false)}
+      >
+        <ScrollView contentContainerStyle={styles.modal}>
+          <Text style={styles.modalTitle}>Add task</Text>
+          <TextInput
+            value={newTaskName}
+            onChangeText={setNewTaskName}
+            placeholder="Task name"
+            autoFocus
+            style={styles.input}
+          />
+          <View style={styles.chipRow}>
+            {eventGroup.budgetCategories.map((bc) => (
+              <Pressable
+                key={bc.id}
+                onPress={() => setNewTaskCategory(bc.categoryKey)}
+                style={[styles.chip, newTaskCategory === bc.categoryKey && styles.chipActive]}
+              >
+                <Text
+                  style={newTaskCategory === bc.categoryKey ? styles.chipTextActive : styles.chipText}
+                >
+                  {bc.categoryKey}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <Pressable onPress={openNewTaskDueDatePicker} style={styles.input}>
+            <Text style={newTaskDueDate ? styles.dateText : styles.datePlaceholder}>
+              {newTaskDueDate ? toDateOnly(newTaskDueDate) : "Select a due date"}
+            </Text>
+          </Pressable>
+          {Platform.OS === "ios" && showAddIosPicker && (
+            <DateTimePicker
+              value={newTaskDueDate ?? new Date()}
+              mode="date"
+              display="inline"
+              onChange={(_event, selected) => {
+                setShowAddIosPicker(false);
+                if (selected) setNewTaskDueDate(selected);
+              }}
+            />
+          )}
+          {addTaskError ? <Text style={styles.error}>{addTaskError}</Text> : null}
+          <Pressable
+            onPress={handleSaveNewTask}
+            disabled={addTaskSaving}
+            style={[styles.button, addTaskSaving && styles.buttonDisabled]}
+          >
+            {addTaskSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Add</Text>}
+          </Pressable>
+          <Pressable onPress={() => setAddingTask(false)} style={styles.closeButton}>
+            <Text style={styles.closeButtonText}>Cancel</Text>
+          </Pressable>
+        </ScrollView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -321,9 +619,18 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.4 },
   buttonText: { color: "#fff", fontWeight: "600" },
   logoutButton: { marginTop: 24 },
-  modal: { flex: 1, backgroundColor: "#fff", padding: 24, paddingTop: 64, gap: 12 },
+  modal: { flexGrow: 1, backgroundColor: "#fff", padding: 24, paddingTop: 64, gap: 12 },
   modalTitle: { fontSize: 18, fontWeight: "600", textAlign: "center", textTransform: "capitalize" },
   input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12, fontSize: 16 },
+  inputMultiline: { minHeight: 80, textAlignVertical: "top" },
+  dateText: { fontSize: 16, color: "#111" },
+  datePlaceholder: { fontSize: 16, color: "#999" },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: "#ccc" },
+  chipActive: { backgroundColor: "#111", borderColor: "#111" },
+  chipText: { color: "#111" },
+  chipTextActive: { color: "#fff" },
   closeButton: { alignItems: "center", padding: 14 },
   closeButtonText: { color: "#111", fontWeight: "600" },
+  dismissText: { color: "#c00", fontWeight: "600" },
 });
