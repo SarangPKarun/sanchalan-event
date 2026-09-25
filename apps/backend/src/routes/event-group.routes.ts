@@ -4,6 +4,8 @@ import {
   createEventGroupHandler,
   listMyEventGroupsHandler,
   getEventGroupHandler,
+  updateBudgetCategoryHandler,
+  createBudgetCategoryHandler,
 } from "../controllers/event-group.controller.js";
 import { generateRoadmapHandler } from "../controllers/roadmap.controller.js";
 
@@ -14,3 +16,5 @@ eventGroupRouter.post("/", createEventGroupHandler);
 eventGroupRouter.get("/me", listMyEventGroupsHandler); // MUST precede /:id
 eventGroupRouter.get("/:id", getEventGroupHandler);
 eventGroupRouter.post("/:id/generate-roadmap", generateRoadmapHandler);
+eventGroupRouter.patch("/:id/budget-categories/:categoryId", updateBudgetCategoryHandler);
+eventGroupRouter.post("/:id/budget-categories", createBudgetCategoryHandler);

@@ -24,3 +24,18 @@ export interface EventGroupWithSubEvents extends EventGroup {
 export interface EventGroupWithDetails extends EventGroupWithSubEvents {
   budgetCategories: BudgetCategory[];
 }
+
+export interface UpdateBudgetCategoryBody {
+  allocatedAmount?: number;
+  budgetTierOverride?: BudgetTier;
+}
+
+export interface CreateBudgetCategoryBody {
+  categoryKey: string;
+  allocatedAmount: number;
+}
+
+export interface BudgetCategoryMutationResponse {
+  budgetCategory: BudgetCategory;
+  warning: string | null;
+}

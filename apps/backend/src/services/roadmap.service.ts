@@ -6,6 +6,7 @@ import { toDateOnly } from "../lib/serialize.js";
 import { generateCompletion } from "../lib/llm.js";
 import { env } from "../lib/env.js";
 import { validateRoadmapOutput, type RoadmapItem } from "../schemas/roadmap.schema.js";
+import { getOwnedEventGroupOrThrow } from "./event-group.service.js";
 
 interface TemplateForPrompt {
   id: string;
@@ -169,9 +170,7 @@ export async function createRoadmapInTransaction(
 }
 
 export async function generateRoadmap(organizerId: string, eventGroupId: string) {
-  const eventGroup = await prisma.eventGroup.findUnique({ where: { id: eventGroupId } });
-  if (!eventGroup) throw new AppError(404, "Event not found");
-  if (eventGroup.organizerId !== organizerId) throw new AppError(403, "Forbidden");
+  const eventGroup = await getOwnedEventGroupOrThrow(organizerId, eventGroupId);
 
   const existingTaskCount = await prisma.task.count({ where: { eventGroupId } });
   if (existingTaskCount > 0) {
