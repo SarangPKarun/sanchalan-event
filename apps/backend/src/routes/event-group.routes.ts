@@ -5,6 +5,7 @@ import {
   listMyEventGroupsHandler,
   getEventGroupHandler,
 } from "../controllers/event-group.controller.js";
+import { generateRoadmapHandler } from "../controllers/roadmap.controller.js";
 
 export const eventGroupRouter: RouterType = Router();
 eventGroupRouter.use(requireAuth, requireRole("organizer"));
@@ -12,3 +13,4 @@ eventGroupRouter.use(requireAuth, requireRole("organizer"));
 eventGroupRouter.post("/", createEventGroupHandler);
 eventGroupRouter.get("/me", listMyEventGroupsHandler); // MUST precede /:id
 eventGroupRouter.get("/:id", getEventGroupHandler);
+eventGroupRouter.post("/:id/generate-roadmap", generateRoadmapHandler);

@@ -17,6 +17,10 @@ const envSchema = z.object({
   OTP_MAX_REQUESTS_PER_WINDOW: z.coerce.number().default(3),
   OTP_REQUEST_WINDOW_MINUTES: z.coerce.number().default(10),
   OTP_MAX_VERIFY_ATTEMPTS: z.coerce.number().default(5),
+
+  LLM_PROVIDER: z.enum(["anthropic", "openai", "google"]),
+  LLM_MODEL: z.string().min(1),
+  LLM_API_KEY: z.string().min(1),
 });
 
 export const env = envSchema.parse(process.env);

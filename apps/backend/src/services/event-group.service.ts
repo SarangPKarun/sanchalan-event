@@ -37,6 +37,32 @@ function serializeEventGroupWithDetails(
   };
 }
 
+function serializeEventGroupWithRoadmap(
+  eg: Prisma.EventGroupGetPayload<{
+    include: {
+      subEvents: true;
+      budgetCategories: true;
+      tasks: { include: { taskCategory: true; dependentLinks: true } };
+    };
+  }>
+) {
+  return {
+    ...serializeEventGroupWithDetails(eg),
+    // task.dependentLinks (relation "TaskDependents", keyed by taskId) is
+    // "rows where this task is the dependent one" — .dependsOnTaskId gives
+    // what THIS task depends on, not the reverse.
+    tasks: eg.tasks.map((task) => {
+      const { taskCategory, dependentLinks, ...rest } = task;
+      return {
+        ...rest,
+        dueDate: rest.dueDate ? toDateOnly(rest.dueDate) : null,
+        categoryKey: taskCategory.categoryKey,
+        dependsOnTaskIds: dependentLinks.map((d) => d.dependsOnTaskId),
+      };
+    }),
+  };
+}
+
 export async function createEventGroup(organizerId: string, input: CreateEventGroupInput) {
   const organizer = await prisma.organizer.findUniqueOrThrow({ where: { id: organizerId } });
   assertProfileComplete(organizer);
@@ -100,9 +126,13 @@ export async function listMyEventGroups(organizerId: string) {
 export async function getEventGroupById(organizerId: string, id: string) {
   const row = await prisma.eventGroup.findUnique({
     where: { id },
-    include: { subEvents: true, budgetCategories: true },
+    include: {
+      subEvents: true,
+      budgetCategories: true,
+      tasks: { include: { taskCategory: true, dependentLinks: true } },
+    },
   });
   if (!row) throw new AppError(404, "Event not found");
   if (row.organizerId !== organizerId) throw new AppError(403, "Forbidden");
-  return serializeEventGroupWithDetails(row);
+  return serializeEventGroupWithRoadmap(row);
 }
