@@ -39,7 +39,7 @@ const TEMPLATES: TemplateSeed[] = [
     taskKey: "finalize_guest_count",
     categoryKey: "guest_logistics",
     defaultNameEn: "Finalize guest count",
-    defaultLeadTimeDays: 90,
+    defaultLeadTimeDays: 100,
     defaultDependencyKeys: [],
   },
   {
