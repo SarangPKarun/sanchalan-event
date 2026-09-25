@@ -43,8 +43,8 @@ export interface Organizer {
   id: string;
   phoneNumber: string;
   email: string | null;
-  displayName: string;
-  organizerType: OrganizerType;
+  displayName: string | null;
+  organizerType: OrganizerType | null;
   preferredLanguage: string | null;
   createdAt: string;
   status: OrganizerStatus;
@@ -52,12 +52,12 @@ export interface Organizer {
 
 export interface Vendor {
   id: string;
-  businessName: string;
-  contactPersonName: string;
+  businessName: string | null;
+  contactPersonName: string | null;
   phoneNumber: string;
   email: string | null;
-  priceTier: VendorPriceTier;
-  serviceArea: string;
+  priceTier: VendorPriceTier | null;
+  serviceArea: string | null;
   status: VendorStatus;
   rejectionReason: string | null;
   submittedAt: string | null;

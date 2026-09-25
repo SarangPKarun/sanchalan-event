@@ -38,8 +38,8 @@ model Organizer {
   id                String          @id @default(uuid()) @db.Uuid
   phoneNumber       String          @unique @map("phone_number")
   email             String?
-  displayName       String          @map("display_name")
-  organizerType     OrganizerType   @map("organizer_type")
+  displayName       String?         @map("display_name")
+  organizerType     OrganizerType?  @map("organizer_type")
   preferredLanguage String?         @map("preferred_language")
   createdAt         DateTime        @default(now()) @map("created_at")
   status            OrganizerStatus
@@ -68,12 +68,12 @@ enum VendorStatus {
 /// [ACTIVE] A business entity, entirely separate account type from organizers.
 model Vendor {
   id                String          @id @default(uuid()) @db.Uuid
-  businessName      String          @map("business_name")
-  contactPersonName String          @map("contact_person_name")
+  businessName      String?         @map("business_name")
+  contactPersonName String?         @map("contact_person_name")
   phoneNumber       String          @unique @map("phone_number")
   email             String?
-  priceTier         VendorPriceTier @map("price_tier")
-  serviceArea       String          @map("service_area")
+  priceTier         VendorPriceTier? @map("price_tier")
+  serviceArea       String?         @map("service_area")
   status            VendorStatus
   rejectionReason   String?         @map("rejection_reason")
   submittedAt       DateTime?       @map("submitted_at")
@@ -149,6 +149,53 @@ model Admin {
   reviewedVendors Vendor[]
 
   @@map("admins")
+}
+
+enum AuthRole {
+  organizer
+  vendor
+}
+
+enum OtpPurpose {
+  organizer_signup
+  vendor_signup
+  login
+}
+
+/// [ACTIVE] Never store the raw OTP — otp_hash is bcrypt(otp). One row per
+/// OTP sent (history kept, not overwritten) so the request rate limit can
+/// COUNT(*) over created_at for a given phone number.
+model OtpRequest {
+  id           String     @id @default(uuid()) @db.Uuid
+  phoneNumber  String     @map("phone_number")
+  role         AuthRole
+  otpHash      String     @map("otp_hash")
+  purpose      OtpPurpose
+  expiresAt    DateTime   @map("expires_at")
+  attemptCount Int        @default(0) @map("attempt_count")
+  consumedAt   DateTime?  @map("consumed_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  @@index([phoneNumber, createdAt])
+  @@index([phoneNumber, role, createdAt])
+  @@map("otp_requests")
+}
+
+/// [ACTIVE] Polymorphic by (userId, role) — no FK, matching the existing
+/// precedent of NotificationLog.recipientType/recipientId, since userId
+/// points at either organizers.id or vendors.id. id = the refresh JWT's
+/// `jti` claim, so /auth/refresh and /auth/logout can look the row up
+/// directly instead of searching by hash.
+model RefreshToken {
+  id        String    @id @db.Uuid
+  tokenHash String    @map("token_hash")
+  userId    String    @map("user_id") @db.Uuid
+  role      AuthRole
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@map("refresh_tokens")
 }
 
 enum EventGroupRole {
