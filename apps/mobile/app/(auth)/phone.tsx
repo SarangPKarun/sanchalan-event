@@ -3,17 +3,21 @@ import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 
 import { router } from "expo-router";
 import { api } from "../../lib/api";
 import type { Role } from "../../lib/types";
+import { DEFAULT_COUNTRY, type Country } from "../../lib/countryCodes";
+import { CountryCodePicker } from "../../lib/CountryCodePicker";
 
-// E.164, matching the backend's exact validation (mandatory leading "+", no spaces).
+// Matches the backend's E.164 validation (mandatory leading "+", no spaces).
 const PHONE_REGEX = /^\+[1-9]\d{7,14}$/;
 
 export default function PhoneEntryScreen() {
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
+  const [localNumber, setLocalNumber] = useState("");
   const [role, setRole] = useState<Role>("organizer");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const normalized = phoneNumber.replace(/\s+/g, "");
+  const digitsOnly = localNumber.replace(/\D/g, "");
+  const normalized = `${country.dialCode}${digitsOnly}`;
   const isValid = PHONE_REGEX.test(normalized);
 
   async function handleSubmit() {
@@ -51,14 +55,17 @@ export default function PhoneEntryScreen() {
         </Pressable>
       </View>
 
-      <TextInput
-        value={phoneNumber}
-        onChangeText={setPhoneNumber}
-        placeholder="+919876543210"
-        keyboardType="phone-pad"
-        autoFocus
-        style={styles.input}
-      />
+      <View style={styles.phoneRow}>
+        <CountryCodePicker value={country} onChange={setCountry} />
+        <TextInput
+          value={localNumber}
+          onChangeText={setLocalNumber}
+          placeholder="98765 43210"
+          keyboardType="phone-pad"
+          autoFocus
+          style={styles.phoneInput}
+        />
+      </View>
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -81,7 +88,8 @@ const styles = StyleSheet.create({
   roleChipActive: { backgroundColor: "#111", borderColor: "#111" },
   roleText: { color: "#111" },
   roleTextActive: { color: "#fff" },
-  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12, fontSize: 16 },
+  phoneRow: { flexDirection: "row", gap: 8 },
+  phoneInput: { flex: 1, borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12, fontSize: 16 },
   error: { color: "#c00", textAlign: "center" },
   button: { backgroundColor: "#111", borderRadius: 8, padding: 14, alignItems: "center" },
   buttonDisabled: { opacity: 0.4 },
