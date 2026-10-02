@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { router } from "expo-router";
+import { parsePhoneNumberFromString } from "libphonenumber-js/max";
 import { api } from "../../lib/api";
 import type { Role } from "../../lib/types";
 import { DEFAULT_COUNTRY, type Country } from "../../lib/countryCodes";
 import { CountryCodePicker } from "../../lib/CountryCodePicker";
-
-// Matches the backend's E.164 validation (mandatory leading "+", no spaces).
-const PHONE_REGEX = /^\+[1-9]\d{7,14}$/;
 
 export default function PhoneEntryScreen() {
   const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
@@ -18,7 +16,11 @@ export default function PhoneEntryScreen() {
 
   const digitsOnly = localNumber.replace(/\D/g, "");
   const normalized = `${country.dialCode}${digitsOnly}`;
-  const isValid = PHONE_REGEX.test(normalized);
+  // Same per-country mobile check as the backend (e.g. +91 needs exactly 10 digits).
+  const parsed = parsePhoneNumberFromString(normalized);
+  const phoneType = parsed?.isValid() ? parsed.getType() : undefined;
+  const isValid = phoneType === "MOBILE" || phoneType === "FIXED_LINE_OR_MOBILE";
+  const showInvalidHint = digitsOnly.length > 0 && !isValid;
 
   async function handleSubmit() {
     if (!isValid || submitting) return;
@@ -27,8 +29,13 @@ export default function PhoneEntryScreen() {
     try {
       await api.post("/auth/otp/request", { phoneNumber: normalized, role });
       router.push({ pathname: "/(auth)/otp", params: { phoneNumber: normalized, role } });
-    } catch {
-      setError("Could not send a code. Check the number and try again.");
+    } catch (err) {
+      const status = (err as { response?: { status?: number } }).response?.status;
+      setError(
+        status === 400
+          ? `Enter a valid ${country.name} phone number.`
+          : "Could not send a code. Check the number and try again."
+      );
     } finally {
       setSubmitting(false);
     }
@@ -67,6 +74,9 @@ export default function PhoneEntryScreen() {
         />
       </View>
 
+      {showInvalidHint && !error ? (
+        <Text style={styles.error}>Enter a valid {country.name} phone number.</Text>
+      ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Pressable

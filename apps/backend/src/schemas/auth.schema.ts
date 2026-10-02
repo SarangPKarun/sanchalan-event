@@ -1,10 +1,22 @@
+import { parsePhoneNumberFromString } from "libphonenumber-js/max";
 import { z } from "zod";
 
 export const authRoleSchema = z.enum(["organizer", "vendor"]);
 
 const phoneNumberSchema = z
   .string()
-  .regex(/^\+[1-9]\d{7,14}$/, "phoneNumber must be E.164, e.g. +919876543210");
+  .regex(/^\+[1-9]\d{7,14}$/, "phoneNumber must be E.164, e.g. +919876543210")
+  .refine(
+    (value) => {
+      const parsed = parsePhoneNumberFromString(value);
+      const type = parsed?.isValid() ? parsed.getType() : undefined;
+      return type === "MOBILE" || type === "FIXED_LINE_OR_MOBILE";
+    },
+    {
+      message:
+        "phoneNumber must be a valid mobile number for its country, e.g. +91 numbers need exactly 10 digits",
+    }
+  );
 
 export const otpRequestSchema = z.object({
   phoneNumber: phoneNumberSchema,
