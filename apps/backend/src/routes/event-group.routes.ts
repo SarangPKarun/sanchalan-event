@@ -5,6 +5,7 @@ import {
   listMyEventGroupsHandler,
   getEventGroupHandler,
   updateEventGroupHandler,
+  deleteEventGroupHandler,
   deleteBudgetCategoryHandler,
   updateBudgetCategoryHandler,
   createBudgetCategoryHandler,
@@ -19,6 +20,7 @@ eventGroupRouter.post("/", createEventGroupHandler);
 eventGroupRouter.get("/me", listMyEventGroupsHandler); // MUST precede /:id
 eventGroupRouter.get("/:id", getEventGroupHandler);
 eventGroupRouter.patch("/:id", updateEventGroupHandler);
+eventGroupRouter.delete("/:id", deleteEventGroupHandler);
 eventGroupRouter.post("/:id/generate-roadmap", generateRoadmapHandler);
 eventGroupRouter.get("/:id/tasks", listEventGroupTasksHandler);
 eventGroupRouter.post("/:id/tasks", createTaskHandler);

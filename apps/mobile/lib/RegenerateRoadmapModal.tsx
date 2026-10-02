@@ -56,7 +56,8 @@ export function RegenerateRoadmapModal({
       const body: GenerateRoadmapBody = { mode };
       const { data } = await api.post<GenerateRoadmapResponse>(
         `/event-groups/${eventGroupId}/generate-roadmap`,
-        body
+        body,
+        { timeout: 90_000 } // LLM generation can exceed the client's default timeout
       );
       onDone(data);
     } catch (err: any) {

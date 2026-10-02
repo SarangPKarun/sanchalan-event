@@ -14,6 +14,7 @@ import {
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { router, useLocalSearchParams } from "expo-router";
 import { api } from "../../../lib/api";
+import { useOrganizerData } from "../../../lib/organizer-context";
 import { EditEventModal } from "../../../lib/EditEventModal";
 import { RegenerateRoadmapModal } from "../../../lib/RegenerateRoadmapModal";
 import type {
@@ -29,6 +30,11 @@ import type {
   BudgetCategory,
 } from "@sanchalan/shared-types";
 
+// Category keys are snake_case ("music_entertainment"); show them as plain words.
+function labelOf(key: string): string {
+  return key.replace(/_/g, " ");
+}
+
 function toDateOnly(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
@@ -43,6 +49,7 @@ const TASK_STATUSES: { value: NormalStatus; label: string }[] = [
 
 export default function EventHomeScreen() {
   const { eventGroupId } = useLocalSearchParams<{ eventGroupId: string }>();
+  const { reloadEvents } = useOrganizerData();
 
   const [eventGroup, setEventGroup] = useState<EventGroupWithRoadmap | null>(null);
   const [tasks, setTasks] = useState<TaskWithFullDependencies[]>([]);
@@ -53,6 +60,7 @@ export default function EventHomeScreen() {
 
   const [editingEvent, setEditingEvent] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [taskCategories, setTaskCategories] = useState<TaskCategorySummary[]>([]);
   const [showRemoved, setShowRemoved] = useState(false);
@@ -138,7 +146,9 @@ export default function EventHomeScreen() {
     setGenerating(true);
     setGenerateError(null);
     try {
-      await api.post(`/event-groups/${eventGroupId}/generate-roadmap`);
+      await api.post(`/event-groups/${eventGroupId}/generate-roadmap`, undefined, {
+        timeout: 90_000, // LLM generation can exceed the client's default timeout
+      });
       await load();
       await loadTasks();
     } catch {
@@ -174,6 +184,38 @@ export default function EventHomeScreen() {
     } catch {
       Alert.alert("Could not restore", "Please try again.");
     }
+  }
+
+  function handleDeleteEvent() {
+    if (!eventGroup || deleting) return;
+    Alert.alert(
+      "Delete this event?",
+      `"${eventGroup.name}" and its budget, roadmap and tasks will be permanently deleted. This can't be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete event",
+          style: "destructive",
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await api.delete(`/event-groups/${eventGroupId}`);
+              await reloadEvents();
+              // Back to the existing "My events" screen (don't stack a second copy of it).
+              router.canGoBack()
+                ? router.back()
+                : router.replace({ pathname: "/(app)/(organizer)/events" });
+            } catch (err: any) {
+              setDeleting(false);
+              Alert.alert(
+                "Could not delete the event",
+                err?.response?.data?.error ?? "Please try again."
+              );
+            }
+          },
+        },
+      ]
+    );
   }
 
   function openEditModal(bc: BudgetCategory) {
@@ -224,7 +266,7 @@ export default function EventHomeScreen() {
     const target = editingCategory;
     Alert.alert(
       "Delete category",
-      `Delete "${target.categoryKey}" and its ${target.allocatedAmount.toLocaleString()} allocation?`,
+      `Delete "${labelOf(target.categoryKey)}" and its ${target.allocatedAmount.toLocaleString()} allocation?`,
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -306,8 +348,8 @@ export default function EventHomeScreen() {
       DateTimePickerAndroid.open({
         value: editTaskDueDate ?? new Date(),
         mode: "date",
-        onChange: (_event, selected) => {
-          if (selected) setEditTaskDueDate(selected);
+        onValueChange: (_event, selected) => {
+          setEditTaskDueDate(selected);
         },
       });
     } else {
@@ -369,8 +411,8 @@ export default function EventHomeScreen() {
       DateTimePickerAndroid.open({
         value: newTaskDueDate ?? new Date(),
         mode: "date",
-        onChange: (_event, selected) => {
-          if (selected) setNewTaskDueDate(selected);
+        onValueChange: (_event, selected) => {
+          setNewTaskDueDate(selected);
         },
       });
     } else {
@@ -504,7 +546,7 @@ export default function EventHomeScreen() {
       </View>
       {eventGroup.budgetCategories.map((bc) => (
         <Pressable key={bc.id} onPress={() => openEditModal(bc)} style={styles.budgetRow}>
-          <Text style={styles.budgetLabel}>{bc.categoryKey}</Text>
+          <Text style={styles.budgetLabel}>{labelOf(bc.categoryKey)}</Text>
           <View style={styles.editIconRow}>
             <Text style={styles.budgetAmount}>{bc.allocatedAmount.toLocaleString()}</Text>
             <Text style={styles.editIcon}>✏️</Text>
@@ -544,7 +586,7 @@ export default function EventHomeScreen() {
       ) : (
         groupedTasks.map((group) => (
           <View key={group.categoryKey} style={styles.categoryGroup}>
-            <Text style={styles.categoryHeader}>{group.categoryKey}</Text>
+            <Text style={styles.categoryHeader}>{labelOf(group.categoryKey)}</Text>
             {group.tasks.map((task) => (
               <Pressable key={task.id} onPress={() => openTaskDetail(task)} style={styles.taskRow}>
                 <Text style={styles.taskName}>{task.name}</Text>
@@ -577,6 +619,17 @@ export default function EventHomeScreen() {
         </View>
       ) : null}
 
+      <Pressable
+        onPress={handleDeleteEvent}
+        disabled={deleting}
+        style={[styles.deleteEventButton, deleting && styles.buttonDisabled]}
+      >
+        {deleting ? (
+          <ActivityIndicator color="#c00" />
+        ) : (
+          <Text style={styles.deleteEventText}>🗑️ Delete event</Text>
+        )}
+      </Pressable>
 
       <Modal
         visible={editingCategory !== null}
@@ -584,7 +637,7 @@ export default function EventHomeScreen() {
         onRequestClose={() => setEditingCategory(null)}
       >
         <View style={styles.modal}>
-          <Text style={styles.modalTitle}>Edit {editingCategory?.categoryKey}</Text>
+          <Text style={styles.modalTitle}>Edit {labelOf(editingCategory?.categoryKey ?? "")}</Text>
           <TextInput
             value={editCategoryKey}
             onChangeText={setEditCategoryKey}
@@ -681,10 +734,11 @@ export default function EventHomeScreen() {
               value={editTaskDueDate ?? new Date()}
               mode="date"
               display="inline"
-              onChange={(_event, selected) => {
+              onValueChange={(_event, selected) => {
                 setShowEditIosPicker(false);
-                if (selected) setEditTaskDueDate(selected);
+                setEditTaskDueDate(selected);
               }}
+              onDismiss={() => setShowEditIosPicker(false)}
             />
           )}
           <View style={styles.chipRow}>
@@ -697,7 +751,7 @@ export default function EventHomeScreen() {
                 <Text
                   style={editTaskCategory === c.categoryKey ? styles.chipTextActive : styles.chipText}
                 >
-                  {c.categoryKey}
+                  {labelOf(c.categoryKey)}
                 </Text>
               </Pressable>
             ))}
@@ -760,7 +814,7 @@ export default function EventHomeScreen() {
                 <Text
                   style={newTaskCategory === c.categoryKey ? styles.chipTextActive : styles.chipText}
                 >
-                  {c.categoryKey}
+                  {labelOf(c.categoryKey)}
                 </Text>
               </Pressable>
             ))}
@@ -775,10 +829,11 @@ export default function EventHomeScreen() {
               value={newTaskDueDate ?? new Date()}
               mode="date"
               display="inline"
-              onChange={(_event, selected) => {
+              onValueChange={(_event, selected) => {
                 setShowAddIosPicker(false);
-                if (selected) setNewTaskDueDate(selected);
+                setNewTaskDueDate(selected);
               }}
+              onDismiss={() => setShowAddIosPicker(false)}
             />
           )}
           {addTaskError ? <Text style={styles.error}>{addTaskError}</Text> : null}
@@ -860,6 +915,16 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.4 },
   buttonText: { color: "#fff", fontWeight: "600" },
   browseVendorsButton: { marginTop: 4 },
+  deleteEventButton: {
+    marginTop: 32,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: "#c00",
+    borderRadius: 8,
+    padding: 14,
+    alignItems: "center",
+  },
+  deleteEventText: { color: "#c00", fontWeight: "600" },
   topBar: { flexDirection: "row", justifyContent: "space-between", marginTop: 40 },
   modal: { flexGrow: 1, backgroundColor: "#fff", padding: 24, paddingTop: 64, gap: 12 },
   modalTitle: { fontSize: 18, fontWeight: "600", textAlign: "center", textTransform: "capitalize" },

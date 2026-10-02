@@ -2,7 +2,8 @@ import type { EventGroup, Organizer, Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../lib/errors.js";
 import { toNumber, toDateOnly } from "../lib/serialize.js";
-import { getBudgetSplit, computeBudgetAllocations } from "../config/budget-splits.js";
+import { computeBudgetAllocations } from "../config/budget-splits.js";
+import { generateBudgetSplit } from "./budget-split.service.js";
 import type {
   CreateEventGroupInput,
   UpdateEventGroupInput,
@@ -98,7 +99,16 @@ export async function createEventGroup(organizerId: string, input: CreateEventGr
   const organizer = await prisma.organizer.findUniqueOrThrow({ where: { id: organizerId } });
   assertProfileComplete(organizer);
 
-  const split = getBudgetSplit(input.eventType, input.region);
+  // LLM call happens before (not inside) the transaction so no DB connection is held open meanwhile.
+  const split = await generateBudgetSplit({
+    eventType: input.eventType,
+    name: input.name,
+    region: input.region,
+    religionOrTradition: input.religionOrTradition ?? null,
+    guestCountEstimate: input.guestCountEstimate,
+    budgetTier: input.budgetTier,
+    totalBudget: input.totalBudget,
+  });
   const allocations = computeBudgetAllocations(input.totalBudget, split);
   const primaryDate = new Date(input.primaryDate);
 
@@ -341,4 +351,48 @@ export async function updateEventGroup(
     })),
     warning: computeBudgetWarning(toNumber(result.eventGroup.totalBudget), result.budgetCategories),
   };
+}
+
+/** Permanently deletes an event and everything under it. The schema has no cascade rules, so the
+ * child tables are removed explicitly, deepest first, in one transaction (all-or-nothing). */
+export async function deleteEventGroup(organizerId: string, eventGroupId: string) {
+  await getOwnedEventGroupOrThrow(organizerId, eventGroupId);
+
+  // Recorded payments are financial records — never remove them silently.
+  const paymentCount = await prisma.payment.count({ where: { booking: { eventGroupId } } });
+  if (paymentCount > 0) {
+    throw new AppError(
+      409,
+      `This event has ${paymentCount} recorded payment${paymentCount === 1 ? "" : "s"} and can't be deleted.`
+    );
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const inEvent = { eventGroupId };
+    await tx.booking.deleteMany({ where: inEvent });
+    await tx.review.deleteMany({ where: inEvent });
+    await tx.thankYouNote.deleteMany({ where: inEvent });
+    await tx.eventMedia.deleteMany({ where: inEvent });
+    await tx.productionPipelineItem.deleteMany({ where: { task: inEvent } });
+    await tx.budgetLine.deleteMany({
+      where: { OR: [{ budgetCategory: inEvent }, { linkedTask: inEvent }] },
+    });
+    await tx.taskDependency.deleteMany({
+      where: { OR: [{ task: inEvent }, { dependsOnTask: inEvent }] },
+    });
+    await tx.taskEditLog.deleteMany({ where: inEvent });
+    await tx.task.deleteMany({ where: inEvent });
+    await tx.budgetCategory.deleteMany({ where: inEvent });
+    await tx.guestSeatingAssignment.deleteMany({ where: { guest: inEvent } });
+    await tx.guestSubEventInvite.deleteMany({ where: { guest: inEvent } });
+    await tx.guest.deleteMany({ where: inEvent });
+    await tx.guestGroup.deleteMany({ where: inEvent });
+    await tx.document.deleteMany({ where: inEvent });
+    await tx.roadmapGenerationLog.deleteMany({ where: inEvent });
+    await tx.rolePermission.deleteMany({ where: inEvent });
+    await tx.subEvent.deleteMany({ where: inEvent });
+    await tx.eventGroup.delete({ where: { id: eventGroupId } });
+  });
+
+  return { deleted: true, id: eventGroupId };
 }

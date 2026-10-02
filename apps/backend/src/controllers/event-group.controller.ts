@@ -77,3 +77,12 @@ export async function deleteBudgetCategoryHandler(req: Request, res: Response, n
     next(err);
   }
 }
+
+export async function deleteEventGroupHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = idParamSchema.parse(req.params);
+    res.status(200).json(await eventGroupService.deleteEventGroup(req.auth!.userId, id));
+  } catch (err) {
+    next(err);
+  }
+}

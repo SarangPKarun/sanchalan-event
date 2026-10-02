@@ -66,8 +66,8 @@ export default function EventSetupScreen() {
         value: primaryDate ?? new Date(),
         mode: "date",
         minimumDate: new Date(),
-        onChange: (_event, selectedDate) => {
-          if (selectedDate) setPrimaryDate(selectedDate);
+        onValueChange: (_event, selectedDate) => {
+          setPrimaryDate(selectedDate);
         },
       });
     } else {
@@ -88,7 +88,9 @@ export default function EventSetupScreen() {
         budgetTier,
         guestCountEstimate: guestCountNum,
         primaryDate: toDateOnly(primaryDate),
-      });
+      },
+      // The server builds the budget categories with the LLM, which can take longer than the client default.
+      { timeout: 90_000 });
       await data.reloadEvents();
       // Replace (not push) so Back from the new event goes to "My events", not to this form.
       router.replace({
@@ -143,10 +145,11 @@ export default function EventSetupScreen() {
           mode="date"
           minimumDate={new Date()}
           display="inline"
-          onChange={(_event, selectedDate) => {
+          onValueChange={(_event, selectedDate) => {
             setShowIosPicker(false);
-            if (selectedDate) setPrimaryDate(selectedDate);
+            setPrimaryDate(selectedDate);
           }}
+          onDismiss={() => setShowIosPicker(false)}
         />
       )}
 
@@ -196,6 +199,7 @@ export default function EventSetupScreen() {
           <Text style={styles.buttonText}>Create event</Text>
         )}
       </Pressable>
+      {submitting ? <Text style={styles.hint}>Building your budget…</Text> : null}
     </ScrollView>
   );
 }
@@ -217,6 +221,7 @@ const styles = StyleSheet.create({
   segment: { flex: 1, paddingVertical: 10, alignItems: "center", borderLeftWidth: 1, borderLeftColor: "#ccc" },
   segmentActive: { backgroundColor: "#111" },
   error: { color: "#c00", textAlign: "center" },
+  hint: { color: "#666", textAlign: "center" },
   button: { backgroundColor: "#111", borderRadius: 8, padding: 14, alignItems: "center", marginTop: 8 },
   buttonDisabled: { opacity: 0.4 },
   buttonText: { color: "#fff", fontWeight: "600" },

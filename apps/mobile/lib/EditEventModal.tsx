@@ -72,8 +72,8 @@ export function EditEventModal({
       DateTimePickerAndroid.open({
         value: date,
         mode: "date",
-        onChange: (_event, selected) => {
-          if (selected) setDate(selected);
+        onValueChange: (_event, selected) => {
+          setDate(selected);
         },
       });
     } else {
@@ -190,10 +190,11 @@ export function EditEventModal({
             value={date}
             mode="date"
             display="inline"
-            onChange={(_event, selected) => {
+            onValueChange={(_event, selected) => {
               setShowIosPicker(false);
-              if (selected) setDate(selected);
+              setDate(selected);
             }}
+            onDismiss={() => setShowIosPicker(false)}
           />
         )}
         {dateChanged ? (
