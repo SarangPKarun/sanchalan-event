@@ -1,8 +1,5 @@
 import { z } from "zod";
-import {
-  VENDOR_DESCRIPTION_MAX,
-  VENDOR_MAX_CATEGORIES,
-} from "@sanchalan/shared-types";
+import { VENDOR_DESCRIPTION_MAX, VENDOR_MAX_CATEGORIES } from "../lib/vendor-limits.js";
 
 const trimmed = (max: number) => z.string().trim().min(1).max(max);
 const optionalUrl = z

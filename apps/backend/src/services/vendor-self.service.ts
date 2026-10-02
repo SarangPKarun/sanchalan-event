@@ -6,7 +6,7 @@ import {
   VENDOR_DESCRIPTION_MIN,
   VENDOR_MAX_PAST_WORK,
   VENDOR_REVIEW_TRIGGER_FIELDS,
-} from "@sanchalan/shared-types";
+} from "../lib/vendor-limits.js";
 import type { Prisma, VendorReviewAction } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../lib/errors.js";
