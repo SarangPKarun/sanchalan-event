@@ -30,7 +30,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await setTokens({ accessToken: data.accessToken, refreshToken });
         // /auth/refresh only returns a new accessToken — role isn't
         // re-issued there, so it's read back from where signIn persisted it.
-        setRole(await getRole());
+        const storedRole = await getRole();
+        if (!storedRole) {
+          // No role means no screen in (app) is reachable — that renders as
+          // "Unmatched Route". Force a fresh sign-in instead.
+          await clearTokens();
+          setState("unauthed");
+          return;
+        }
+        setRole(storedRole);
         setState("authed");
       } catch (e) {
         if (isAuthRejection(e)) {
