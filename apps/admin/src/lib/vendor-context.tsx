@@ -1,5 +1,11 @@
 import { createContext, useContext, useCallback, useState, type ReactNode } from "react";
-import type { Vendor, VendorCategory, VendorPortfolioItem, VendorStatus } from "@sanchalan/shared-types";
+import type {
+  Vendor,
+  VendorCategory,
+  VendorPortfolioItem,
+  VendorReviewLog,
+  VendorStatus,
+} from "@sanchalan/shared-types";
 import { api } from "./api.ts";
 
 export interface VendorWithReview extends Vendor {
@@ -7,11 +13,14 @@ export interface VendorWithReview extends Vendor {
   portfolioItems: VendorPortfolioItem[];
 }
 
+export interface VendorDetail extends VendorWithReview {
+  reviewLogs: (VendorReviewLog & { admin: { id: string; name: string } | null })[];
+}
+
 interface VendorContextValue {
   vendors: VendorWithReview[];
   status: "idle" | "loading" | "error" | "ready";
   fetchVendors: (statusFilter: VendorStatus) => Promise<void>;
-  getVendor: (id: string) => VendorWithReview | undefined;
 }
 
 const VendorContext = createContext<VendorContextValue | null>(null);
@@ -31,10 +40,8 @@ export function VendorProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const getVendor = useCallback((id: string) => vendors.find((v) => v.id === id), [vendors]);
-
   return (
-    <VendorContext.Provider value={{ vendors, status, fetchVendors, getVendor }}>
+    <VendorContext.Provider value={{ vendors, status, fetchVendors }}>
       {children}
     </VendorContext.Provider>
   );

@@ -206,6 +206,51 @@ async function main() {
 
   await seedVendorCategories();
   await seedAdmin();
+  // Opt-in only: never creates fake vendors on a real database by default.
+  if (process.env.SEED_SAMPLE_VENDORS === "true") await seedSampleVendors();
+}
+
+const SAMPLE_VENDORS = [
+  { phone: "+919990000001", name: "Rang Mandap Decor", category: "decor", status: "published" },
+  { phone: "+919990000002", name: "Shubh Lens Photography", category: "photography", status: "pending_review" },
+  { phone: "+919990000003", name: "Annapurna Caterers", category: "catering", status: "rejected" },
+  { phone: "+919990000004", name: "Draft Venue Co", category: "venue", status: "draft" },
+] as const;
+
+async function seedSampleVendors(): Promise<void> {
+  for (const sample of SAMPLE_VENDORS) {
+    const existing = await prisma.vendor.findUnique({ where: { phoneNumber: sample.phone } });
+    if (existing) continue;
+
+    const category = await prisma.vendorCategory.findUniqueOrThrow({
+      where: { categoryKey: sample.category },
+    });
+    const isDraft = sample.status === "draft";
+    await prisma.vendor.create({
+      data: {
+        phoneNumber: sample.phone,
+        status: sample.status,
+        businessName: sample.name,
+        contactPersonName: "Sample Owner",
+        priceTier: "standard",
+        serviceArea: "Pune",
+        description: `${sample.name} has been serving weddings and family events across Pune for over a decade.`,
+        yearsOfExperience: 10,
+        startingPrice: 50000,
+        submittedAt: isDraft ? null : new Date(),
+        rejectionReason: sample.status === "rejected" ? "Please add more details about past events." : null,
+        ...(isDraft
+          ? {}
+          : {
+              vendorVendorCategories: { create: { vendorCategoryId: category.id } },
+              portfolioItems: {
+                create: { title: "Sharma wedding, Pune", caption: "400 guests, 3-day event", displayOrder: 0 },
+              },
+            }),
+      },
+    });
+  }
+  console.log(`Seeded sample vendors (${SAMPLE_VENDORS.length}).`);
 }
 
 async function seedVendorCategories(): Promise<void> {

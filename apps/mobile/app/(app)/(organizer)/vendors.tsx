@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView, Image } from "react-native";
+import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { api } from "../../../lib/api";
+import { vendorCategoryLabel } from "@sanchalan/shared-types";
 import type { EventGroup, ListVendorsResponse, VendorPriceTier, VendorWithPortfolio } from "@sanchalan/shared-types";
 
 const PRICE_TIERS: { value: VendorPriceTier; label: string }[] = [
@@ -11,8 +12,9 @@ const PRICE_TIERS: { value: VendorPriceTier; label: string }[] = [
   { value: "luxury", label: "Luxury" },
 ];
 
-function coverPhotoUrl(vendor: VendorWithPortfolio): string | null {
-  return vendor.portfolioItems[0]?.mediaUrl ?? null;
+function initials(name: string | null): string {
+  const parts = (name ?? "?").trim().split(/\s+/);
+  return ((parts[0]?.[0] ?? "?") + (parts[1]?.[0] ?? "")).toUpperCase();
 }
 
 export default function VendorsScreen() {
@@ -116,7 +118,7 @@ export default function VendorsScreen() {
               onPress={() => setCategory(key)}
               style={[styles.chip, category === key && styles.chipActive]}
             >
-              <Text style={category === key ? styles.chipTextActive : styles.chipText}>{key}</Text>
+              <Text style={category === key ? styles.chipTextActive : styles.chipText}>{vendorCategoryLabel(key)}</Text>
             </Pressable>
           ))}
         </View>
@@ -139,24 +141,27 @@ export default function VendorsScreen() {
       )}
 
       <ScrollView contentContainerStyle={styles.list}>
-        {vendors.map((vendor) => {
-          const cover = coverPhotoUrl(vendor);
-          return (
-            <Pressable key={vendor.id} onPress={() => openVendor(vendor.id)} style={styles.card}>
-              {cover ? (
-                <Image source={{ uri: cover }} style={styles.cardImage} />
-              ) : (
-                <View style={[styles.cardImage, styles.cardImagePlaceholder]} />
-              )}
-              <View style={styles.cardInfo}>
-                <Text style={styles.cardName}>{vendor.businessName ?? "Unnamed vendor"}</Text>
-                <Text style={styles.cardMeta}>
-                  {vendor.priceTier ?? "no tier"} · {vendor.serviceArea ?? "no area"}
-                </Text>
-              </View>
-            </Pressable>
-          );
-        })}
+        {vendors.map((vendor) => (
+          <Pressable key={vendor.id} onPress={() => openVendor(vendor.id)} style={styles.card}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{initials(vendor.businessName)}</Text>
+            </View>
+            <View style={styles.cardInfo}>
+              <Text style={styles.cardName}>{vendor.businessName ?? "Unnamed vendor"}</Text>
+              <Text style={styles.cardMeta}>
+                {vendor.vendorVendorCategories
+                  .map((c) => vendorCategoryLabel(c.vendorCategory.categoryKey))
+                  .join(", ") || "Uncategorised"}
+              </Text>
+              <Text style={styles.cardMeta}>
+                {vendor.priceTier ?? "no tier"} · {vendor.serviceArea ?? "no area"}
+                {vendor.startingPrice != null
+                  ? ` · from ₹${vendor.startingPrice.toLocaleString("en-IN")}`
+                  : ""}
+              </Text>
+            </View>
+          </Pressable>
+        ))}
       </ScrollView>
     </View>
   );
@@ -183,8 +188,15 @@ const styles = StyleSheet.create({
     padding: 8,
     alignItems: "center",
   },
-  cardImage: { width: 64, height: 64, borderRadius: 6 },
-  cardImagePlaceholder: { backgroundColor: "#eee" },
+  avatar: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: "#eee",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: { fontSize: 18, fontWeight: "600", color: "#444" },
   cardInfo: { flex: 1, gap: 2 },
   cardName: { fontSize: 16, fontWeight: "600" },
   cardMeta: { fontSize: 14, color: "#666", textTransform: "capitalize" },

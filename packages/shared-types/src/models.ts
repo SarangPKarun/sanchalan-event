@@ -32,6 +32,7 @@ import type {
   ThankYouStatus,
   VendorAvailabilityStatus,
   VendorPriceTier,
+  VendorReviewAction,
   VendorStatus,
 } from "./enums.js";
 
@@ -58,6 +59,12 @@ export interface Vendor {
   email: string | null;
   priceTier: VendorPriceTier | null;
   serviceArea: string | null;
+  description: string | null;
+  yearsOfExperience: number | null;
+  startingPrice: number | null;
+  instagramUrl: string | null;
+  websiteUrl: string | null;
+  whatsappNumber: string | null;
   status: VendorStatus;
   rejectionReason: string | null;
   submittedAt: string | null;
@@ -80,9 +87,20 @@ export interface VendorVendorCategory {
 export interface VendorPortfolioItem {
   id: string;
   vendorId: string;
-  mediaUrl: string;
+  title: string;
+  mediaUrl: string | null;
   caption: string | null;
   displayOrder: number;
+  createdAt: string;
+}
+
+export interface VendorReviewLog {
+  id: string;
+  vendorId: string;
+  adminId: string | null;
+  action: VendorReviewAction;
+  reason: string | null;
+  createdAt: string;
 }
 
 export interface Admin {

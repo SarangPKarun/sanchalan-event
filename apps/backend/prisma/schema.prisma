@@ -67,19 +67,25 @@ enum VendorStatus {
 
 /// [ACTIVE] A business entity, entirely separate account type from organizers.
 model Vendor {
-  id                String          @id @default(uuid()) @db.Uuid
-  businessName      String?         @map("business_name")
-  contactPersonName String?         @map("contact_person_name")
-  phoneNumber       String          @unique @map("phone_number")
+  id                String           @id @default(uuid()) @db.Uuid
+  businessName      String?          @map("business_name")
+  contactPersonName String?          @map("contact_person_name")
+  phoneNumber       String           @unique @map("phone_number")
   email             String?
   priceTier         VendorPriceTier? @map("price_tier")
-  serviceArea       String?         @map("service_area")
+  serviceArea       String?          @map("service_area")
+  description       String?
+  yearsOfExperience Int?             @map("years_of_experience")
+  startingPrice     Int?             @map("starting_price")
+  instagramUrl      String?          @map("instagram_url")
+  websiteUrl        String?          @map("website_url")
+  whatsappNumber    String?          @map("whatsapp_number")
   status            VendorStatus
-  rejectionReason   String?         @map("rejection_reason")
-  submittedAt       DateTime?       @map("submitted_at")
-  reviewedAt        DateTime?       @map("reviewed_at")
-  reviewedBy        String?         @map("reviewed_by") @db.Uuid
-  createdAt         DateTime        @default(now()) @map("created_at")
+  rejectionReason   String?          @map("rejection_reason")
+  submittedAt       DateTime?        @map("submitted_at")
+  reviewedAt        DateTime?        @map("reviewed_at")
+  reviewedBy        String?          @map("reviewed_by") @db.Uuid
+  createdAt         DateTime         @default(now()) @map("created_at")
 
   reviewer                Admin?                   @relation(fields: [reviewedBy], references: [id])
   vendorVendorCategories  VendorVendorCategory[]
@@ -91,6 +97,7 @@ model Vendor {
   reviews                 Review[]
   eventMedia              EventMedia[]
   productionPipelineItems ProductionPipelineItem[]
+  reviewLogs              VendorReviewLog[]
 
   @@map("vendors")
 }
@@ -111,24 +118,52 @@ model VendorVendorCategory {
   vendorId         String @map("vendor_id") @db.Uuid
   vendorCategoryId String @map("vendor_category_id") @db.Uuid
 
-  vendor         Vendor         @relation(fields: [vendorId], references: [id])
+  vendor         Vendor         @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   vendorCategory VendorCategory @relation(fields: [vendorCategoryId], references: [id])
 
   @@id([vendorId, vendorCategoryId])
   @@map("vendor_vendor_categories")
 }
 
-/// [ACTIVE] Photo/video portfolio items for a vendor.
+/// [ACTIVE] Past-work entries for a vendor (text-first; mediaUrl is optional and unused until image upload exists).
 model VendorPortfolioItem {
-  id           String  @id @default(uuid()) @db.Uuid
-  vendorId     String  @map("vendor_id") @db.Uuid
-  mediaUrl     String  @map("media_url")
+  id           String   @id @default(uuid()) @db.Uuid
+  vendorId     String   @map("vendor_id") @db.Uuid
+  title        String
+  mediaUrl     String?  @map("media_url")
   caption      String?
-  displayOrder Int     @map("display_order")
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  vendor Vendor @relation(fields: [vendorId], references: [id])
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
 
   @@map("vendor_portfolio_items")
+}
+
+enum VendorReviewAction {
+  submitted
+  withdrawn
+  approved
+  rejected
+  suspended
+  unsuspended
+  reverification_required
+}
+
+/// [ACTIVE] Append-only history of vendor review decisions and status transitions.
+model VendorReviewLog {
+  id        String             @id @default(uuid()) @db.Uuid
+  vendorId  String             @map("vendor_id") @db.Uuid
+  adminId   String?            @map("admin_id") @db.Uuid
+  action    VendorReviewAction
+  reason    String?
+  createdAt DateTime           @default(now()) @map("created_at")
+
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  admin  Admin? @relation(fields: [adminId], references: [id])
+
+  @@index([vendorId, createdAt])
+  @@map("vendor_review_logs")
 }
 
 enum AdminRole {
@@ -147,6 +182,7 @@ model Admin {
   createdAt    DateTime  @default(now()) @map("created_at")
 
   reviewedVendors Vendor[]
+  reviewLogs      VendorReviewLog[]
 
   @@map("admins")
 }

@@ -247,3 +247,21 @@ a.link-button {
   gap: 12px;
   width: 100%;
 }
+
+.vendor-description {
+  white-space: pre-wrap;
+}
+
+.past-work-list,
+.review-log {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.past-work-list li {
+  display: flex;
+  flex-direction: column;
+}

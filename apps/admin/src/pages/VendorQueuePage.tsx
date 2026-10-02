@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { vendorCategoryLabel } from "@sanchalan/shared-types";
 import type { VendorStatus } from "@sanchalan/shared-types";
 import { useVendors } from "../lib/vendor-context.tsx";
 import { useAuth } from "../lib/auth-context.tsx";
@@ -8,6 +9,8 @@ const TABS: { label: string; value: VendorStatus }[] = [
   { label: "Pending review", value: "pending_review" },
   { label: "Published", value: "published" },
   { label: "Rejected", value: "rejected" },
+  { label: "Suspended", value: "suspended" },
+  { label: "Drafts", value: "draft" },
 ];
 
 export function VendorQueuePage() {
@@ -50,20 +53,19 @@ export function VendorQueuePage() {
         {vendors.map((vendor) => (
           <li key={vendor.id}>
             <Link to={`/vendors/${vendor.id}`} className="vendor-row">
-              <div className="vendor-thumbs">
-                {vendor.portfolioItems.slice(0, 3).map((item) => (
-                  <img key={item.id} src={item.mediaUrl} alt="" />
-                ))}
-              </div>
               <div className="vendor-row-info">
                 <strong>{vendor.businessName ?? "(no business name)"}</strong>
                 <span>
-                  {vendor.vendorVendorCategories.map((c) => c.vendorCategory.categoryKey).join(", ") ||
-                    "no category"}
+                  {vendor.vendorVendorCategories
+                    .map((c) => vendorCategoryLabel(c.vendorCategory.categoryKey))
+                    .join(", ") || "no category"}
                   {" · "}
                   {vendor.priceTier ?? "no tier"}
                   {" · "}
                   {vendor.serviceArea ?? "no area"}
+                  {vendor.submittedAt
+                    ? ` · submitted ${new Date(vendor.submittedAt).toLocaleDateString()}`
+                    : ` · ${vendor.phoneNumber}`}
                 </span>
               </div>
             </Link>

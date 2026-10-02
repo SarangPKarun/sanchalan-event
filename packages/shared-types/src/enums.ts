@@ -15,6 +15,15 @@ export type VendorStatus =
   | "rejected"
   | "suspended";
 
+export type VendorReviewAction =
+  | "submitted"
+  | "withdrawn"
+  | "approved"
+  | "rejected"
+  | "suspended"
+  | "unsuspended"
+  | "reverification_required";
+
 export type AdminRole = "super_admin" | "vendor_reviewer" | "support";
 
 export type EventGroupRole = "owner" | "editor" | "viewer" | "approver";

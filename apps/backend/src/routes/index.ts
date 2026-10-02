@@ -5,6 +5,7 @@ import { eventGroupRouter } from "./event-group.routes.js";
 import { taskRouter, taskCategoryRouter } from "./task.routes.js";
 import { adminRouter } from "./admin.routes.js";
 import { vendorRouter } from "./vendor.routes.js";
+import { vendorSelfRouter, vendorCategoryRouter } from "./vendor-self.routes.js";
 
 export const router: RouterType = Router();
 router.use("/auth", authRouter);
@@ -14,3 +15,5 @@ router.use("/tasks", taskRouter);
 router.use("/task-categories", taskCategoryRouter);
 router.use("/admin", adminRouter);
 router.use("/vendors", vendorRouter);
+router.use("/vendor/me", vendorSelfRouter);
+router.use("/vendor-categories", vendorCategoryRouter);

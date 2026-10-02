@@ -127,10 +127,33 @@ Re-running the seed script is safe — it skips creating the admin if that
 email already exists, so it won't rotate the password out from under you.
 
 Log in at `http://localhost:5173/login` to reach the vendor review queue
-(pending review / published / rejected tabs, with Approve/Reject actions on
-each vendor's detail page). Approve/Reject is restricted to the `super_admin`
+(pending review / published / rejected / suspended / drafts tabs). Each
+vendor's detail page shows the full profile, past work and review history,
+with Approve/Reject (pending vendors) and Suspend/Unsuspend (published /
+suspended vendors) actions. These actions are restricted to the `super_admin`
 and `vendor_reviewer` admin roles — a `support` admin can view the queue but
-not act on it.
+not act on it. Approve/Reject only work on vendors that are pending review.
+
+## Vendor onboarding flow
+
+A vendor logs in with their phone number (choose **I'm a Vendor**), which
+creates a `draft` profile. In the app they fill in business details,
+categories, price tier, an "about" text and text-based **past work** entries
+(no image upload yet), then **Submit for review** → `pending_review`. An admin
+approves it (→ `published`, visible to organizers) or rejects it with a reason
+(→ `rejected`; the vendor sees the reason, edits and resubmits). A vendor can
+withdraw a pending submission to edit it. Editing the business name, service
+area, price tier, about text, categories or past work of a **published**
+profile sends it back to `pending_review` (hidden until re-approved); other
+fields (email, links, years of experience, starting price) apply immediately.
+Every submission and review decision is recorded in `vendor_review_logs`.
+
+Vendor-facing API: `GET/PATCH /vendor/me`, `PUT /vendor/me/categories`,
+`POST/PATCH/DELETE /vendor/me/past-work[/:itemId]`, `PUT /vendor/me/past-work/order`,
+`POST /vendor/me/submit`, `POST /vendor/me/withdraw`, `GET /vendor-categories`.
+
+To get sample vendors in every state for dogfooding, run the seed with
+`SEED_SAMPLE_VENDORS=true pnpm exec prisma db seed` (off by default).
 
 ## Database
 
