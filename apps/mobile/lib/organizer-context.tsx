@@ -6,10 +6,14 @@ type OrganizerDataState =
   | { status: "loading" }
   | { status: "error" }
   | { status: "needs-profile" }
-  | { status: "needs-event"; organizer: Organizer }
-  | { status: "ready"; organizer: Organizer; eventGroupId: string };
+  | { status: "ready"; organizer: Organizer; eventGroups: EventGroupWithSubEvents[] };
 
-type OrganizerDataContextValue = OrganizerDataState & { refetch: () => Promise<void> };
+type OrganizerDataContextValue = OrganizerDataState & {
+  refetch: () => Promise<void>;
+  // Re-fetches the event list without flipping to "loading" (which would unmount the
+  // navigator and reset the navigation state) — use after creating/editing an event.
+  reloadEvents: () => Promise<void>;
+};
 
 const OrganizerDataContext = createContext<OrganizerDataContextValue | null>(null);
 
@@ -25,13 +29,8 @@ export function OrganizerDataProvider({ children }: { children: ReactNode }) {
         return;
       }
       const { data: eventGroups } = await api.get<EventGroupWithSubEvents[]>("/event-groups/me");
-      if (eventGroups.length === 0) {
-        setState({ status: "needs-event", organizer });
-        return;
-      }
-      // Organizer may have more than one event group; no switcher UI yet —
-      // take the first. Not an oversight, just out of scope for now.
-      setState({ status: "ready", organizer, eventGroupId: eventGroups[0]!.id });
+      // Zero events is a valid "ready" state — the Events screen shows an empty state.
+      setState({ status: "ready", organizer, eventGroups });
     } catch {
       // A plain fetch failure here isn't an auth failure — real 401s are
       // already handled by api.ts's interceptor (which redirects to login
@@ -41,12 +40,21 @@ export function OrganizerDataProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const reloadEvents = useCallback(async () => {
+    try {
+      const { data: eventGroups } = await api.get<EventGroupWithSubEvents[]>("/event-groups/me");
+      setState((prev) => (prev.status === "ready" ? { ...prev, eventGroups } : prev));
+    } catch {
+      // Keep the list we already have; the next focus/reload will retry.
+    }
+  }, []);
+
   useEffect(() => {
     refetch();
   }, [refetch]);
 
   return (
-    <OrganizerDataContext.Provider value={{ ...state, refetch }}>
+    <OrganizerDataContext.Provider value={{ ...state, refetch, reloadEvents }}>
       {children}
     </OrganizerDataContext.Provider>
   );

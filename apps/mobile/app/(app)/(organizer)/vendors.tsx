@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView, Image } from "react-native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { api } from "../../../lib/api";
-import { useOrganizerData } from "../../../lib/organizer-context";
 import type { EventGroup, ListVendorsResponse, VendorPriceTier, VendorWithPortfolio } from "@sanchalan/shared-types";
 
 const PRICE_TIERS: { value: VendorPriceTier; label: string }[] = [
@@ -17,7 +16,7 @@ function coverPhotoUrl(vendor: VendorWithPortfolio): string | null {
 }
 
 export default function VendorsScreen() {
-  const { eventGroupId } = useOrganizerData() as { eventGroupId: string };
+  const { eventGroupId } = useLocalSearchParams<{ eventGroupId: string }>();
 
   const [priceTier, setPriceTier] = useState<VendorPriceTier | null>(null);
   const [category, setCategory] = useState<string | null>(null);

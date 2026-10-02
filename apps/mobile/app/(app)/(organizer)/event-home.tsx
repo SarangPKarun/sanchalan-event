@@ -12,10 +12,8 @@ import {
   Alert,
 } from "react-native";
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { api } from "../../../lib/api";
-import { useAuth } from "../../../lib/auth-context";
-import { useOrganizerData } from "../../../lib/organizer-context";
 import { EditEventModal } from "../../../lib/EditEventModal";
 import { RegenerateRoadmapModal } from "../../../lib/RegenerateRoadmapModal";
 import type {
@@ -44,8 +42,7 @@ const TASK_STATUSES: { value: NormalStatus; label: string }[] = [
 ];
 
 export default function EventHomeScreen() {
-  const { signOut } = useAuth();
-  const { eventGroupId } = useOrganizerData() as { eventGroupId: string };
+  const { eventGroupId } = useLocalSearchParams<{ eventGroupId: string }>();
 
   const [eventGroup, setEventGroup] = useState<EventGroupWithRoadmap | null>(null);
   const [tasks, setTasks] = useState<TaskWithFullDependencies[]>([]);
@@ -451,6 +448,18 @@ export default function EventHomeScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      <View style={styles.topBar}>
+        <Pressable
+          onPress={() =>
+            router.canGoBack() ? router.back() : router.replace({ pathname: "/(app)/(organizer)/events" })
+          }
+        >
+          <Text style={styles.addCategoryText}>‹ My events</Text>
+        </Pressable>
+        <Pressable onPress={() => router.push({ pathname: "/(app)/(organizer)/event-setup" })}>
+          <Text style={styles.addCategoryText}>+ Add event</Text>
+        </Pressable>
+      </View>
       <Text style={styles.title}>{eventGroup.name}</Text>
       <Text style={styles.subtitle}>
         {eventGroup.primaryDate} · {eventGroup.guestCountEstimate} guests · {eventGroup.budgetTier}
@@ -461,7 +470,9 @@ export default function EventHomeScreen() {
       </Pressable>
 
       <Pressable
-        onPress={() => router.push({ pathname: "/(app)/(organizer)/vendors" })}
+        onPress={() =>
+          router.push({ pathname: "/(app)/(organizer)/vendors", params: { eventGroupId } })
+        }
         style={[styles.button, styles.browseVendorsButton]}
       >
         <Text style={styles.buttonText}>Browse vendors</Text>
@@ -566,9 +577,6 @@ export default function EventHomeScreen() {
         </View>
       ) : null}
 
-      <Pressable onPress={signOut} style={[styles.button, styles.logoutButton]}>
-        <Text style={styles.buttonText}>Log out</Text>
-      </Pressable>
 
       <Modal
         visible={editingCategory !== null}
@@ -852,7 +860,7 @@ const styles = StyleSheet.create({
   buttonDisabled: { opacity: 0.4 },
   buttonText: { color: "#fff", fontWeight: "600" },
   browseVendorsButton: { marginTop: 4 },
-  logoutButton: { marginTop: 24 },
+  topBar: { flexDirection: "row", justifyContent: "space-between", marginTop: 40 },
   modal: { flexGrow: 1, backgroundColor: "#fff", padding: 24, paddingTop: 64, gap: 12 },
   modalTitle: { fontSize: 18, fontWeight: "600", textAlign: "center", textTransform: "capitalize" },
   input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12, fontSize: 16 },

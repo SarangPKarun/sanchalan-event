@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { api } from "../../../lib/api";
+import { router } from "expo-router";
 import { useOrganizerData } from "../../../lib/organizer-context";
 import type { EventType, BudgetTier } from "@sanchalan/shared-types";
 
@@ -34,7 +35,8 @@ function toDateOnly(d: Date): string {
 }
 
 export default function EventSetupScreen() {
-  const { refetch } = useOrganizerData();
+  const data = useOrganizerData();
+  const hasOtherEvents = data.status === "ready" && data.eventGroups.length > 0;
 
   const [eventType, setEventType] = useState<EventType>("wedding");
   const [name, setName] = useState("");
@@ -78,7 +80,7 @@ export default function EventSetupScreen() {
     setSubmitting(true);
     setError(null);
     try {
-      await api.post("/event-groups", {
+      const { data: created } = await api.post<{ id: string }>("/event-groups", {
         eventType,
         name: name.trim(),
         region: region.trim(),
@@ -87,7 +89,12 @@ export default function EventSetupScreen() {
         guestCountEstimate: guestCountNum,
         primaryDate: toDateOnly(primaryDate),
       });
-      await refetch(); // Stack.Protected reacts to the status change automatically
+      await data.reloadEvents();
+      // Replace (not push) so Back from the new event goes to "My events", not to this form.
+      router.replace({
+        pathname: "/(app)/(organizer)/event-home",
+        params: { eventGroupId: created.id },
+      });
     } catch {
       setError("Could not create your event. Please check the details and try again.");
       setSubmitting(false);
@@ -96,7 +103,12 @@ export default function EventSetupScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Set up your event</Text>
+      {hasOtherEvents ? (
+        <Pressable onPress={() => router.back()}>
+          <Text style={styles.cancelText}>‹ Cancel</Text>
+        </Pressable>
+      ) : null}
+      <Text style={styles.title}>Create event</Text>
 
       <Text style={styles.label}>Event type</Text>
       <View style={styles.chipRow}>
@@ -181,7 +193,7 @@ export default function EventSetupScreen() {
         {submitting ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text style={styles.buttonText}>Create my event</Text>
+          <Text style={styles.buttonText}>Create event</Text>
         )}
       </Pressable>
     </ScrollView>
@@ -191,6 +203,7 @@ export default function EventSetupScreen() {
 const styles = StyleSheet.create({
   container: { backgroundColor: "#fff", padding: 24, gap: 12 },
   title: { fontSize: 20, fontWeight: "600", textAlign: "center", marginBottom: 8 },
+  cancelText: { fontSize: 14, fontWeight: "600", color: "#111", marginTop: 32 },
   label: { fontSize: 14, fontWeight: "600", color: "#111" },
   input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 12, fontSize: 16, justifyContent: "center" },
   dateText: { fontSize: 16, color: "#111" },

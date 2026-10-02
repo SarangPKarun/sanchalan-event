@@ -33,12 +33,10 @@ function OrganizerNavigator() {
         <Stack.Screen name="profile-setup" />
       </Stack.Protected>
 
-      <Stack.Protected guard={data.status === "needs-event"}>
-        <Stack.Screen name="event-setup" />
-      </Stack.Protected>
-
       <Stack.Protected guard={data.status === "ready"}>
+        <Stack.Screen name="events" />
         <Stack.Screen name="event-home" />
+        <Stack.Screen name="event-setup" />
         <Stack.Screen name="vendors" />
         <Stack.Screen name="vendor-detail" />
       </Stack.Protected>
