@@ -150,3 +150,11 @@ export function validateRoadmapOutput(
     ? { success: true, data: result.data }
     : { success: false, error: result.error.message };
 }
+
+export const ROADMAP_REGEN_MODES = ["keep_my_work", "replace_all", "add_missing"] as const;
+export type RoadmapRegenMode = (typeof ROADMAP_REGEN_MODES)[number];
+
+export const generateRoadmapBodySchema = z
+  .object({ mode: z.enum(ROADMAP_REGEN_MODES).optional() })
+  .default({});
+export type GenerateRoadmapBodyInput = z.infer<typeof generateRoadmapBodySchema>;

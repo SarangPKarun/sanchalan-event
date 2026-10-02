@@ -8,6 +8,7 @@ export interface TaskWithDependencies extends Task {
 
 export interface GenerateRoadmapResponse {
   tasks: TaskWithDependencies[];
+  removedTaskCount?: number; // tasks soft-deleted by a re-run
 }
 
 export interface EventGroupWithRoadmap extends EventGroupWithDetails {
@@ -27,6 +28,18 @@ export interface UpdateTaskBody {
   dueDate?: string | null;
   name?: string;
   description?: string | null;
+  category?: string; // taskCategoryId (uuid) or categoryKey
+}
+
+export type RoadmapRegenMode = "keep_my_work" | "replace_all" | "add_missing";
+
+export interface GenerateRoadmapBody {
+  mode?: RoadmapRegenMode;
+}
+
+export interface TaskCategorySummary {
+  id: string;
+  categoryKey: string;
 }
 
 export interface CreateTaskBody {

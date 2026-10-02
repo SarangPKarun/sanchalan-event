@@ -9,17 +9,25 @@ import {
   Modal,
   TextInput,
   Platform,
+  Alert,
 } from "react-native";
 import DateTimePicker, { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
 import { router } from "expo-router";
 import { api } from "../../../lib/api";
 import { useAuth } from "../../../lib/auth-context";
 import { useOrganizerData } from "../../../lib/organizer-context";
+import { EditEventModal } from "../../../lib/EditEventModal";
+import { RegenerateRoadmapModal } from "../../../lib/RegenerateRoadmapModal";
 import type {
   EventGroupWithRoadmap,
   TaskWithFullDependencies,
   ListEventGroupTasksResponse,
   BudgetCategoryMutationResponse,
+  DeleteBudgetCategoryResponse,
+  UpdateBudgetCategoryBody,
+  UpdateEventGroupResponse,
+  GenerateRoadmapResponse,
+  TaskCategorySummary,
   BudgetCategory,
 } from "@sanchalan/shared-types";
 
@@ -46,7 +54,15 @@ export default function EventHomeScreen() {
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [budgetWarning, setBudgetWarning] = useState<string | null>(null);
 
+  const [editingEvent, setEditingEvent] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [taskCategories, setTaskCategories] = useState<TaskCategorySummary[]>([]);
+  const [showRemoved, setShowRemoved] = useState(false);
+  const [removedTasks, setRemovedTasks] = useState<TaskWithFullDependencies[]>([]);
+
   const [editingCategory, setEditingCategory] = useState<BudgetCategory | null>(null);
+  const [editCategoryKey, setEditCategoryKey] = useState("");
   const [editAmount, setEditAmount] = useState("");
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
@@ -62,6 +78,7 @@ export default function EventHomeScreen() {
   const [editTaskDescription, setEditTaskDescription] = useState("");
   const [editTaskDueDate, setEditTaskDueDate] = useState<Date | null>(null);
   const [editTaskStatus, setEditTaskStatus] = useState<NormalStatus>("not_started");
+  const [editTaskCategory, setEditTaskCategory] = useState("");
   const [showEditIosPicker, setShowEditIosPicker] = useState(false);
   const [taskSaving, setTaskSaving] = useState(false);
   const [taskSaveError, setTaskSaveError] = useState<string | null>(null);
@@ -95,10 +112,29 @@ export default function EventHomeScreen() {
     }
   }, [eventGroupId]);
 
+  const loadRemovedTasks = useCallback(async () => {
+    try {
+      const { data } = await api.get<ListEventGroupTasksResponse>(
+        `/event-groups/${eventGroupId}/tasks?includeNotApplicable=true`
+      );
+      setRemovedTasks(data.tasks.filter((t) => t.status === "not_applicable"));
+    } catch {
+      // Non-critical list; leave whatever we had.
+    }
+  }, [eventGroupId]);
+
   useEffect(() => {
     load();
     loadTasks();
+    api
+      .get<{ categories: TaskCategorySummary[] }>("/task-categories")
+      .then(({ data }) => setTaskCategories(data.categories))
+      .catch(() => {});
   }, [load, loadTasks]);
+
+  useEffect(() => {
+    if (showRemoved) loadRemovedTasks();
+  }, [showRemoved, loadRemovedTasks]);
 
   async function handleGenerateRoadmap() {
     if (generating) return;
@@ -115,8 +151,37 @@ export default function EventHomeScreen() {
     }
   }
 
+  async function handleEventSaved(result: UpdateEventGroupResponse) {
+    setEditingEvent(false);
+    setBudgetWarning(result.warning);
+    setNotice(null);
+    await load();
+  }
+
+  async function handleRegenerated(result: GenerateRoadmapResponse) {
+    setRegenerating(false);
+    setNotice(
+      `Roadmap updated: ${result.tasks.length} task${result.tasks.length === 1 ? "" : "s"} added` +
+        `${result.removedTaskCount ? `, ${result.removedTaskCount} removed` : ""}.`
+    );
+    await load();
+    await loadTasks();
+    if (showRemoved) await loadRemovedTasks();
+  }
+
+  async function handleRestoreTask(task: TaskWithFullDependencies) {
+    try {
+      await api.patch(`/tasks/${task.id}`, { status: "not_started" });
+      await loadTasks();
+      await loadRemovedTasks();
+    } catch {
+      Alert.alert("Could not restore", "Please try again.");
+    }
+  }
+
   function openEditModal(bc: BudgetCategory) {
     setEditingCategory(bc);
+    setEditCategoryKey(bc.categoryKey);
     setEditAmount(String(bc.allocatedAmount));
     setEditError(null);
   }
@@ -128,21 +193,65 @@ export default function EventHomeScreen() {
       setEditError("Enter a valid amount.");
       return;
     }
+    const key = editCategoryKey.trim().toLowerCase().replace(/\s+/g, "_");
+    if (!key) {
+      setEditError("Enter a category name.");
+      return;
+    }
+    const body: UpdateBudgetCategoryBody = {};
+    if (amount !== editingCategory.allocatedAmount) body.allocatedAmount = amount;
+    if (key !== editingCategory.categoryKey) body.categoryKey = key;
+    if (Object.keys(body).length === 0) {
+      setEditingCategory(null);
+      return;
+    }
     setEditSaving(true);
     setEditError(null);
     try {
       const { data } = await api.patch<BudgetCategoryMutationResponse>(
         `/event-groups/${eventGroupId}/budget-categories/${editingCategory.id}`,
-        { allocatedAmount: amount }
+        body
       );
       setBudgetWarning(data.warning);
       setEditingCategory(null);
       await load();
-    } catch {
-      setEditError("Could not save. Please try again.");
+    } catch (err: any) {
+      setEditError(err?.response?.data?.error ?? "Could not save. Please try again.");
     } finally {
       setEditSaving(false);
     }
+  }
+
+  function handleDeleteCategory() {
+    if (!editingCategory) return;
+    const target = editingCategory;
+    Alert.alert(
+      "Delete category",
+      `Delete "${target.categoryKey}" and its ${target.allocatedAmount.toLocaleString()} allocation?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setEditSaving(true);
+            setEditError(null);
+            try {
+              const { data } = await api.delete<DeleteBudgetCategoryResponse>(
+                `/event-groups/${eventGroupId}/budget-categories/${target.id}`
+              );
+              setBudgetWarning(data.warning);
+              setEditingCategory(null);
+              await load();
+            } catch (err: any) {
+              setEditError(err?.response?.data?.error ?? "Could not delete. Please try again.");
+            } finally {
+              setEditSaving(false);
+            }
+          },
+        },
+      ]
+    );
   }
 
   function openAddModal() {
@@ -191,6 +300,7 @@ export default function EventHomeScreen() {
         ? (task.status as NormalStatus)
         : "not_started"
     );
+    setEditTaskCategory(task.categoryKey);
     setTaskSaveError(null);
   }
 
@@ -222,6 +332,7 @@ export default function EventHomeScreen() {
         dueDate: editTaskDueDate ? toDateOnly(editTaskDueDate) : null,
         name: editTaskName.trim(),
         description: editTaskDescription.trim() || null,
+        ...(editTaskCategory !== selectedTask.categoryKey ? { category: editTaskCategory } : {}),
       });
       setSelectedTask(null);
       await loadTasks();
@@ -240,6 +351,7 @@ export default function EventHomeScreen() {
       await api.delete(`/tasks/${selectedTask.id}`);
       setSelectedTask(null);
       await loadTasks();
+      if (showRemoved) await loadRemovedTasks();
     } catch {
       setTaskSaveError("Could not update. Please try again.");
     } finally {
@@ -249,7 +361,7 @@ export default function EventHomeScreen() {
 
   function openAddTaskModal() {
     setNewTaskName("");
-    setNewTaskCategory(eventGroup?.budgetCategories[0]?.categoryKey ?? "");
+    setNewTaskCategory(taskCategories[0]?.categoryKey ?? "");
     setNewTaskDueDate(null);
     setAddTaskError(null);
     setAddingTask(true);
@@ -293,12 +405,18 @@ export default function EventHomeScreen() {
       });
       setAddingTask(false);
       await loadTasks();
-    } catch {
-      setAddTaskError("Could not add task. Please try again.");
+    } catch (err: any) {
+      setAddTaskError(err?.response?.data?.error ?? "Could not add task. Please try again.");
     } finally {
       setAddTaskSaving(false);
     }
   }
+
+  const allocatedTotal = useMemo(
+    () => (eventGroup?.budgetCategories ?? []).reduce((sum, c) => sum + c.allocatedAmount, 0),
+    [eventGroup]
+  );
+  const remaining = (eventGroup?.totalBudget ?? 0) - allocatedTotal;
 
   const groupedTasks = useMemo(() => {
     const groups = new Map<string, TaskWithFullDependencies[]>();
@@ -334,7 +452,13 @@ export default function EventHomeScreen() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>{eventGroup.name}</Text>
-      <Text style={styles.subtitle}>{eventGroup.primaryDate}</Text>
+      <Text style={styles.subtitle}>
+        {eventGroup.primaryDate} · {eventGroup.guestCountEstimate} guests · {eventGroup.budgetTier}
+      </Text>
+      <Pressable onPress={() => setEditingEvent(true)} style={styles.editIconRow}>
+        <Text style={styles.editIcon}>✏️</Text>
+        <Text style={styles.addCategoryText}>Edit event details</Text>
+      </Pressable>
 
       <Pressable
         onPress={() => router.push({ pathname: "/(app)/(organizer)/vendors" })}
@@ -344,10 +468,36 @@ export default function EventHomeScreen() {
       </Pressable>
 
       <Text style={styles.sectionTitle}>Budget breakdown</Text>
+      <View style={styles.summaryBox}>
+        <Pressable
+          onPress={() => setEditingEvent(true)}
+          style={styles.summaryRow}
+          accessibilityLabel="Edit total budget"
+        >
+          <Text style={styles.budgetLabel}>Total budget</Text>
+          <View style={styles.editIconRow}>
+            <Text style={styles.totalAmount}>{eventGroup.totalBudget.toLocaleString()}</Text>
+            <Text style={styles.editIcon}>✏️</Text>
+          </View>
+        </Pressable>
+        <View style={styles.summaryRow}>
+          <Text style={styles.budgetLabel}>Allocated</Text>
+          <Text style={styles.budgetAmount}>{allocatedTotal.toLocaleString()}</Text>
+        </View>
+        <View style={styles.summaryRow}>
+          <Text style={styles.budgetLabel}>{remaining < 0 ? "Over by" : "Remaining"}</Text>
+          <Text style={[styles.budgetAmount, remaining < 0 && styles.overBudget]}>
+            {Math.abs(remaining).toLocaleString()}
+          </Text>
+        </View>
+      </View>
       {eventGroup.budgetCategories.map((bc) => (
         <Pressable key={bc.id} onPress={() => openEditModal(bc)} style={styles.budgetRow}>
           <Text style={styles.budgetLabel}>{bc.categoryKey}</Text>
-          <Text style={styles.budgetAmount}>{bc.allocatedAmount.toLocaleString()}</Text>
+          <View style={styles.editIconRow}>
+            <Text style={styles.budgetAmount}>{bc.allocatedAmount.toLocaleString()}</Text>
+            <Text style={styles.editIcon}>✏️</Text>
+          </View>
         </Pressable>
       ))}
       <Pressable onPress={openAddModal}>
@@ -359,6 +509,12 @@ export default function EventHomeScreen() {
       <Pressable onPress={openAddTaskModal}>
         <Text style={styles.addCategoryText}>+ Add task</Text>
       </Pressable>
+      {notice ? <Text style={styles.notice}>{notice}</Text> : null}
+      {eventGroup.tasks.length > 0 ? (
+        <Pressable onPress={() => setRegenerating(true)} style={[styles.button, styles.outlineButton]}>
+          <Text style={styles.outlineButtonText}>🔄 Re-run roadmap</Text>
+        </Pressable>
+      ) : null}
       {eventGroup.tasks.length === 0 ? (
         <>
           {generateError ? <Text style={styles.error}>{generateError}</Text> : null}
@@ -388,6 +544,28 @@ export default function EventHomeScreen() {
         ))
       )}
 
+      {eventGroup.tasks.length > 0 ? (
+        <View style={styles.categoryGroup}>
+          <Pressable onPress={() => setShowRemoved((v) => !v)}>
+            <Text style={styles.addCategoryText}>
+              {showRemoved ? "Hide removed tasks" : "Show removed tasks"}
+            </Text>
+          </Pressable>
+          {showRemoved
+            ? removedTasks.length === 0
+              ? <Text style={styles.taskDueDate}>No removed tasks.</Text>
+              : removedTasks.map((task) => (
+                  <View key={task.id} style={styles.taskRow}>
+                    <Text style={[styles.taskName, styles.removedTask]}>{task.name}</Text>
+                    <Pressable onPress={() => handleRestoreTask(task)}>
+                      <Text style={styles.addCategoryText}>Restore</Text>
+                    </Pressable>
+                  </View>
+                ))
+            : null}
+        </View>
+      ) : null}
+
       <Pressable onPress={signOut} style={[styles.button, styles.logoutButton]}>
         <Text style={styles.buttonText}>Log out</Text>
       </Pressable>
@@ -400,10 +578,16 @@ export default function EventHomeScreen() {
         <View style={styles.modal}>
           <Text style={styles.modalTitle}>Edit {editingCategory?.categoryKey}</Text>
           <TextInput
+            value={editCategoryKey}
+            onChangeText={setEditCategoryKey}
+            placeholder="Category name"
+            style={styles.input}
+          />
+          <TextInput
             value={editAmount}
             onChangeText={setEditAmount}
+            placeholder="Amount"
             keyboardType="decimal-pad"
-            autoFocus
             style={styles.input}
           />
           {editError ? <Text style={styles.error}>{editError}</Text> : null}
@@ -413,6 +597,9 @@ export default function EventHomeScreen() {
             style={[styles.button, editSaving && styles.buttonDisabled]}
           >
             {editSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save</Text>}
+          </Pressable>
+          <Pressable onPress={handleDeleteCategory} disabled={editSaving} style={styles.closeButton}>
+            <Text style={styles.dismissText}>Delete category</Text>
           </Pressable>
           <Pressable onPress={() => setEditingCategory(null)} style={styles.closeButton}>
             <Text style={styles.closeButtonText}>Cancel</Text>
@@ -493,6 +680,21 @@ export default function EventHomeScreen() {
             />
           )}
           <View style={styles.chipRow}>
+            {taskCategories.map((c) => (
+              <Pressable
+                key={c.id}
+                onPress={() => setEditTaskCategory(c.categoryKey)}
+                style={[styles.chip, editTaskCategory === c.categoryKey && styles.chipActive]}
+              >
+                <Text
+                  style={editTaskCategory === c.categoryKey ? styles.chipTextActive : styles.chipText}
+                >
+                  {c.categoryKey}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <View style={styles.chipRow}>
             {TASK_STATUSES.map((opt) => (
               <Pressable
                 key={opt.value}
@@ -541,16 +743,16 @@ export default function EventHomeScreen() {
             style={styles.input}
           />
           <View style={styles.chipRow}>
-            {eventGroup.budgetCategories.map((bc) => (
+            {taskCategories.map((c) => (
               <Pressable
-                key={bc.id}
-                onPress={() => setNewTaskCategory(bc.categoryKey)}
-                style={[styles.chip, newTaskCategory === bc.categoryKey && styles.chipActive]}
+                key={c.id}
+                onPress={() => setNewTaskCategory(c.categoryKey)}
+                style={[styles.chip, newTaskCategory === c.categoryKey && styles.chipActive]}
               >
                 <Text
-                  style={newTaskCategory === bc.categoryKey ? styles.chipTextActive : styles.chipText}
+                  style={newTaskCategory === c.categoryKey ? styles.chipTextActive : styles.chipText}
                 >
-                  {bc.categoryKey}
+                  {c.categoryKey}
                 </Text>
               </Pressable>
             ))}
@@ -584,6 +786,19 @@ export default function EventHomeScreen() {
           </Pressable>
         </ScrollView>
       </Modal>
+
+      <EditEventModal
+        visible={editingEvent}
+        eventGroup={eventGroup}
+        onClose={() => setEditingEvent(false)}
+        onSaved={handleEventSaved}
+      />
+      <RegenerateRoadmapModal
+        visible={regenerating}
+        eventGroupId={eventGroupId}
+        onClose={() => setRegenerating(false)}
+        onDone={handleRegenerated}
+      />
     </ScrollView>
   );
 }
@@ -605,6 +820,16 @@ const styles = StyleSheet.create({
   budgetAmount: { fontSize: 16, fontWeight: "600" },
   addCategoryText: { fontSize: 14, color: "#111", fontWeight: "600", marginTop: 8 },
   warning: { color: "#c00", fontSize: 14, marginTop: 8 },
+  editIconRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  editIcon: { fontSize: 16 },
+  totalAmount: { fontSize: 18, fontWeight: "700" },
+  outlineButton: { backgroundColor: "#fff", borderWidth: 1, borderColor: "#111" },
+  outlineButtonText: { color: "#111", fontWeight: "600" },
+  notice: { color: "#060", fontSize: 14, marginTop: 4 },
+  summaryBox: { gap: 4, padding: 12, borderRadius: 8, backgroundColor: "#f5f5f5" },
+  summaryRow: { flexDirection: "row", justifyContent: "space-between" },
+  overBudget: { color: "#c00" },
+  removedTask: { color: "#999", textDecorationLine: "line-through" },
   categoryGroup: { marginTop: 8 },
   categoryHeader: {
     fontSize: 14,

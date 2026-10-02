@@ -25,9 +25,31 @@ export interface EventGroupWithDetails extends EventGroupWithSubEvents {
   budgetCategories: BudgetCategory[];
 }
 
+export interface UpdateEventGroupBody {
+  name?: string;
+  totalBudget?: number;
+  budgetTier?: BudgetTier;
+  guestCountEstimate?: number;
+  primaryDate?: string; // YYYY-MM-DD
+  // Only used when totalBudget changes.
+  budgetAdjustment?: "rescale" | "keep";
+}
+
+export interface UpdateEventGroupResponse {
+  eventGroup: EventGroup;
+  budgetCategories: BudgetCategory[];
+  warning: string | null;
+}
+
 export interface UpdateBudgetCategoryBody {
   allocatedAmount?: number;
   budgetTierOverride?: BudgetTier;
+  categoryKey?: string; // rename
+}
+
+export interface DeleteBudgetCategoryResponse {
+  budgetCategories: BudgetCategory[];
+  warning: string | null;
 }
 
 export interface CreateBudgetCategoryBody {

@@ -12,6 +12,19 @@ function serializeTask(t: Task) {
   return { ...t, dueDate: t.dueDate ? toDateOnly(t.dueDate) : null };
 }
 
+export async function resolveTaskCategory(category: string) {
+  const row = UUID_RE.test(category)
+    ? await prisma.taskCategory.findUnique({ where: { id: category } })
+    : await prisma.taskCategory.findUnique({ where: { categoryKey: category } });
+  if (!row) throw new AppError(400, `Unknown task category "${category}"`);
+  return row;
+}
+
+export async function listTaskCategories() {
+  const rows = await prisma.taskCategory.findMany({ orderBy: { categoryKey: "asc" } });
+  return rows.map((c) => ({ id: c.id, categoryKey: c.categoryKey }));
+}
+
 export async function getOwnedTaskOrThrow(organizerId: string, taskId: string): Promise<Task> {
   const task = await prisma.task.findUnique({ where: { id: taskId } });
   if (!task) throw new AppError(404, "Task not found");
@@ -58,6 +71,15 @@ export async function updateTask(organizerId: string, taskId: string, input: Upd
     previousValue.description = current.description;
     newValue.description = input.description;
     data.description = input.description;
+  }
+
+  if ("category" in input && input.category !== undefined) {
+    const category = await resolveTaskCategory(input.category);
+    if (category.id !== current.taskCategoryId) {
+      previousValue.taskCategoryId = current.taskCategoryId;
+      newValue.taskCategoryId = category.id;
+      data.taskCategory = { connect: { id: category.id } };
+    }
   }
 
   if (Object.keys(data).length === 0) {
@@ -120,10 +142,7 @@ export async function createTask(
 ) {
   await getOwnedEventGroupOrThrow(organizerId, eventGroupId);
 
-  const category = UUID_RE.test(input.category)
-    ? await prisma.taskCategory.findUnique({ where: { id: input.category } })
-    : await prisma.taskCategory.findUnique({ where: { categoryKey: input.category } });
-  if (!category) throw new AppError(400, `Unknown task category "${input.category}"`);
+  const category = await resolveTaskCategory(input.category);
 
   const dependencyTaskIds = input.dependencyTaskIds ?? [];
   if (dependencyTaskIds.length > 0) {
@@ -193,11 +212,15 @@ export async function createTask(
   };
 }
 
-export async function listEventGroupTasks(organizerId: string, eventGroupId: string) {
+export async function listEventGroupTasks(
+  organizerId: string,
+  eventGroupId: string,
+  includeNotApplicable = false
+) {
   await getOwnedEventGroupOrThrow(organizerId, eventGroupId);
 
   const rows = await prisma.task.findMany({
-    where: { eventGroupId, status: { not: "not_applicable" } },
+    where: includeNotApplicable ? { eventGroupId } : { eventGroupId, status: { not: "not_applicable" } },
     include: { taskCategory: true, dependentLinks: true, dependencyLinks: true },
     // dueDate ASC puts NULLs last on Postgres — undated tasks sort to the
     // end of their category rather than jumping to the top.

@@ -14,13 +14,15 @@ export const updateTaskSchema = z
       .nullable()
       .optional()
       .transform((v) => (v === "" ? null : v)),
+    category: z.string().min(1).optional(), // taskCategoryId (uuid) OR categoryKey
   })
   .refine(
     (b) =>
       b.status !== undefined ||
       b.dueDate !== undefined ||
       b.name !== undefined ||
-      b.description !== undefined,
+      b.description !== undefined ||
+      b.category !== undefined,
     { message: "Provide at least one field to update." }
   );
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
@@ -32,3 +34,11 @@ export const createTaskSchema = z.object({
   dependencyTaskIds: z.array(z.string().uuid()).optional(),
 });
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
+
+export const listTasksQuerySchema = z.object({
+  includeNotApplicable: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((v) => v === "true"),
+});
+export type ListTasksQueryInput = z.infer<typeof listTasksQuerySchema>;

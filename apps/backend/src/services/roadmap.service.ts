@@ -5,7 +5,11 @@ import { AppError } from "../lib/errors.js";
 import { toDateOnly } from "../lib/serialize.js";
 import { generateCompletion } from "../lib/llm.js";
 import { env } from "../lib/env.js";
-import { validateRoadmapOutput, type RoadmapItem } from "../schemas/roadmap.schema.js";
+import {
+  validateRoadmapOutput,
+  type RoadmapItem,
+  type RoadmapRegenMode,
+} from "../schemas/roadmap.schema.js";
 import { getOwnedEventGroupOrThrow } from "./event-group.service.js";
 
 interface TemplateForPrompt {
@@ -18,7 +22,11 @@ interface TemplateForPrompt {
   categoryKey: string;
 }
 
-export function buildRoadmapPrompt(eventGroup: EventGroup, templates: TemplateForPrompt[]) {
+export function buildRoadmapPrompt(
+  eventGroup: EventGroup,
+  templates: TemplateForPrompt[],
+  existingTaskNames: string[] = []
+) {
   const systemPrompt = [
     "You are building a task roadmap for a wedding-planning app, by selecting and",
     "customizing from a fixed library of task templates — you do not invent a task",
@@ -45,6 +53,8 @@ export function buildRoadmapPrompt(eventGroup: EventGroup, templates: TemplateFo
     '  (prefix it "custom_"), and you must also include a "name" field (string).',
     "- dependencyKeys may reference ANY task's taskKey in this same response —",
     "  template-based or custom — not just the template library's own default keys.",
+    "- If the input lists alreadyExistingTasks, the user already has those tasks. Do not",
+    "  select a template or add a custom task that duplicates one of them.",
   ].join("\n");
 
   const userPrompt = JSON.stringify(
@@ -65,6 +75,7 @@ export function buildRoadmapPrompt(eventGroup: EventGroup, templates: TemplateFo
         typicalOwnerType: t.typicalOwnerType,
         category: t.categoryKey,
       })),
+      ...(existingTaskNames.length > 0 ? { alreadyExistingTasks: existingTaskNames } : {}),
     },
     null,
     2
@@ -101,12 +112,35 @@ export async function createRoadmapInTransaction(
   categoryIdByKey: Map<string, string>,
   templates: TemplateForPrompt[],
   templateIdsUsed: string[],
-  inputParams: Record<string, unknown>
+  inputParams: Record<string, unknown>,
+  replace: { taskIds: string[]; changedBy: string } = { taskIds: [], changedBy: "" }
 ) {
   const templateByKey = new Map(templates.map((t) => [t.taskKey, t]));
   const taskKeyToId = new Map(items.map((item) => [item.taskKey, randomUUID()]));
 
   const created = await prisma.$transaction(async (tx) => {
+    if (replace.taskIds.length > 0) {
+      const toRemove = await tx.task.findMany({
+        where: { id: { in: replace.taskIds } },
+        select: { id: true, status: true },
+      });
+      await tx.task.updateMany({
+        where: { id: { in: replace.taskIds } },
+        data: { status: "not_applicable" },
+      });
+      await tx.taskEditLog.createMany({
+        data: toRemove.map((t) => ({
+          taskId: t.id,
+          eventGroupId,
+          action: "marked_not_applicable" as const,
+          previousValue: { status: t.status, reason: "roadmap_regenerated" } as Prisma.InputJsonValue,
+          newValue: { status: "not_applicable" } as Prisma.InputJsonValue,
+          changedBy: replace.changedBy,
+          changedAt: new Date(),
+        })),
+      });
+    }
+
     const taskRows = items.map((item) => {
       const template = templateByKey.get(item.taskKey);
       const dueDate = new Date(primaryDate);
@@ -169,13 +203,50 @@ export async function createRoadmapInTransaction(
   }));
 }
 
-export async function generateRoadmap(organizerId: string, eventGroupId: string) {
+// Decides which existing tasks survive a re-run and which get soft-deleted.
+async function planRegeneration(eventGroupId: string, mode: RoadmapRegenMode) {
+  const active = await prisma.task.findMany({
+    where: { eventGroupId, status: { not: "not_applicable" } },
+    select: { id: true, name: true, status: true, source: true },
+  });
+
+  if (mode === "replace_all") {
+    return { removeIds: active.map((t) => t.id), keptNames: [] as string[] };
+  }
+  if (mode === "add_missing") {
+    return { removeIds: [] as string[], keptNames: active.map((t) => t.name) };
+  }
+
+  // keep_my_work: keep user-added tasks, tasks that have progressed, and tasks the user edited.
+  const edited = await prisma.taskEditLog.findMany({
+    where: { eventGroupId, action: "edited" },
+    select: { taskId: true },
+  });
+  const editedIds = new Set(edited.map((e) => e.taskId));
+  const isMine = (t: (typeof active)[number]) =>
+    t.source === "user_added" || t.status !== "not_started" || editedIds.has(t.id);
+  return {
+    removeIds: active.filter((t) => !isMine(t)).map((t) => t.id),
+    keptNames: active.filter(isMine).map((t) => t.name),
+  };
+}
+
+export async function generateRoadmap(
+  organizerId: string,
+  eventGroupId: string,
+  mode?: RoadmapRegenMode
+) {
   const eventGroup = await getOwnedEventGroupOrThrow(organizerId, eventGroupId);
 
   const existingTaskCount = await prisma.task.count({ where: { eventGroupId } });
-  if (existingTaskCount > 0) {
+  if (existingTaskCount > 0 && !mode) {
     throw new AppError(400, "Roadmap already generated for this event");
   }
+
+  const plan =
+    existingTaskCount > 0 && mode
+      ? await planRegeneration(eventGroupId, mode)
+      : { removeIds: [] as string[], keptNames: [] as string[] };
 
   const [templateRows, categories] = await Promise.all([
     prisma.taskTemplate.findMany({
@@ -206,15 +277,32 @@ export async function generateRoadmap(organizerId: string, eventGroupId: string)
   );
   const knownCategoryKeys = new Set(categoryIdByKey.keys());
 
-  const { systemPrompt, userPrompt } = buildRoadmapPrompt(eventGroup, templates);
+  const { systemPrompt, userPrompt } = buildRoadmapPrompt(eventGroup, templates, plan.keptNames);
 
-  const { tasks: items } = await generateAndValidateRoadmap(
+  const { tasks: generated } = await generateAndValidateRoadmap(
     generateCompletion,
     systemPrompt,
     userPrompt,
     knownTaskKeys,
     knownCategoryKeys
   );
+
+  // Kept tasks carry no template key, so duplicates are caught by name as a backstop
+  // to the prompt instruction. Drop dependencies that pointed at a filtered-out task.
+  const keptNameSet = new Set(plan.keptNames.map((n) => n.trim().toLowerCase()));
+  const templateNameByKey = new Map(templates.map((t) => [t.taskKey, t.defaultNameEn]));
+  const items =
+    keptNameSet.size === 0
+      ? generated
+      : (() => {
+          const nameOf = (it: RoadmapItem) => it.name ?? templateNameByKey.get(it.taskKey) ?? it.taskKey;
+          const surviving = generated.filter((it) => !keptNameSet.has(nameOf(it).trim().toLowerCase()));
+          const survivingKeys = new Set(surviving.map((it) => it.taskKey));
+          return surviving.map((it) => ({
+            ...it,
+            dependencyKeys: it.dependencyKeys.filter((k) => survivingKeys.has(k)),
+          }));
+        })();
 
   const usedTemplateIds = templates
     .filter((t) => items.some((item) => !item.isCustom && item.taskKey === t.taskKey))
@@ -228,13 +316,16 @@ export async function generateRoadmap(organizerId: string, eventGroupId: string)
     guestCountEstimate: eventGroup.guestCountEstimate,
   };
 
-  return createRoadmapInTransaction(
+  const tasks = await createRoadmapInTransaction(
     eventGroupId,
     eventGroup.primaryDate,
     items,
     categoryIdByKey,
     templates,
     usedTemplateIds,
-    inputParams
+    { ...inputParams, ...(mode ? { regenerationMode: mode } : {}) },
+    { taskIds: plan.removeIds, changedBy: organizerId }
   );
+
+  return { tasks, removedTaskCount: plan.removeIds.length };
 }

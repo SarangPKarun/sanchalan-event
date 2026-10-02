@@ -23,14 +23,40 @@ export const categoryIdParamSchema = z.object({
 });
 export type CategoryIdParamInput = z.infer<typeof categoryIdParamSchema>;
 
+export const updateEventGroupSchema = z
+  .object({
+    name: z.string().min(1).optional(),
+    totalBudget: z.number().positive().optional(),
+    budgetTier: z.enum(["essential", "standard", "premium", "luxury"]).optional(),
+    guestCountEstimate: z.number().int().positive().optional(),
+    primaryDate: dateOnlySchema.optional(),
+    // Only used when totalBudget changes: scale every category by the same ratio, or leave them.
+    budgetAdjustment: z.enum(["rescale", "keep"]).optional(),
+  })
+  .refine(
+    (b) =>
+      b.name !== undefined ||
+      b.totalBudget !== undefined ||
+      b.budgetTier !== undefined ||
+      b.guestCountEstimate !== undefined ||
+      b.primaryDate !== undefined,
+    { message: "Provide at least one field to update." }
+  );
+export type UpdateEventGroupInput = z.infer<typeof updateEventGroupSchema>;
+
 export const updateBudgetCategorySchema = z
   .object({
     allocatedAmount: z.number().positive().optional(),
     budgetTierOverride: z.enum(["essential", "standard", "premium", "luxury"]).optional(),
+    categoryKey: z.string().min(1).optional(),
   })
-  .refine((b) => b.allocatedAmount !== undefined || b.budgetTierOverride !== undefined, {
-    message: "Provide at least one of allocatedAmount or budgetTierOverride.",
-  });
+  .refine(
+    (b) =>
+      b.allocatedAmount !== undefined ||
+      b.budgetTierOverride !== undefined ||
+      b.categoryKey !== undefined,
+    { message: "Provide at least one of allocatedAmount, budgetTierOverride or categoryKey." }
+  );
 export type UpdateBudgetCategoryInput = z.infer<typeof updateBudgetCategorySchema>;
 
 export const createBudgetCategorySchema = z.object({
