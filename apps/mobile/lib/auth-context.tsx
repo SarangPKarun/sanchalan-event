@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { api } from "./api";
+import { api, isAuthRejection } from "./api";
 import { getRefreshToken, setTokens, clearTokens, getRole, setRole as persistRole } from "./authStorage";
 import type { AuthTokens, Role } from "./types";
 
@@ -32,13 +32,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // re-issued there, so it's read back from where signIn persisted it.
         setRole(await getRole());
         setState("authed");
-      } catch {
-        // Covers both "refresh token invalid/revoked" and network errors.
-        // Simplest-correct behavior for v1: treat any failure as logged out.
-        // This means launching fully offline with a valid token still shows
-        // the login screen — acceptable trade-off for now.
-        await clearTokens();
-        setState("unauthed");
+      } catch (e) {
+        if (isAuthRejection(e)) {
+          await clearTokens();
+          setState("unauthed");
+          return;
+        }
+        // Transient failure (offline, timeout, 5xx): keep the stored session
+        // and enter the app; the 401 interceptor refreshes lazily later.
+        const cachedRole = await getRole();
+        if (cachedRole) {
+          setRole(cachedRole);
+          setState("authed");
+        } else {
+          setState("unauthed");
+        }
       }
     })();
   }, []);

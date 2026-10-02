@@ -19,9 +19,18 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
+// True only when the server explicitly rejected the credentials. Network
+// errors, timeouts and 5xx are transient and must not destroy the session.
+export function isAuthRejection(error: unknown): boolean {
+  const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+  return status === 401 || status === 403;
+}
+
 // Coalesce concurrent 401s (e.g. two screens fire requests at once) into one refresh call.
 let refreshPromise: Promise<string | null> | null = null;
 
+// Resolves to null if the session is dead (no token or server rejected it);
+// throws on transient failures so callers keep the tokens.
 async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = await getRefreshToken();
   if (!refreshToken) return null;
@@ -30,8 +39,9 @@ async function refreshAccessToken(): Promise<string | null> {
     const { data } = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
     await setTokens({ accessToken: data.accessToken, refreshToken });
     return data.accessToken as string;
-  } catch {
-    return null;
+  } catch (e) {
+    if (isAuthRejection(e)) return null;
+    throw e;
   }
 }
 
@@ -51,7 +61,13 @@ api.interceptors.response.use(
           refreshPromise = null;
         });
       }
-      const newAccessToken = await refreshPromise;
+      let newAccessToken: string | null;
+      try {
+        newAccessToken = await refreshPromise;
+      } catch {
+        // Transient failure (offline, timeout, 5xx) — keep the session.
+        return Promise.reject(error);
+      }
 
       if (newAccessToken) {
         original.headers.set("Authorization", `Bearer ${newAccessToken}`);
