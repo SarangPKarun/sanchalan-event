@@ -7,7 +7,11 @@ import '../features/organizer/event_detail_view.dart';
 import '../features/organizer/event_form_view.dart';
 import '../features/organizer/events_view.dart';
 import '../features/organizer/home_view.dart';
+import '../features/organizer/organizer_profile_view.dart';
 import '../features/organizer/organizer_shell.dart';
+import '../features/organizer/vendor_detail_view.dart';
+import '../features/organizer/vendors_view.dart';
+import '../features/vendor/vendor_repository.dart' show VendorFilters;
 import '../features/organizer/profile_setup_view.dart';
 import '../features/organizer/sheets/budget_category_sheet.dart';
 import '../features/organizer/sheets/regenerate_sheet.dart';
@@ -15,8 +19,8 @@ import '../features/organizer/sheets/task_sheet.dart';
 import '../models/enums.dart';
 import '../models/event.dart';
 import '../models/roadmap.dart';
+import '../models/vendor.dart';
 import '../shared/widgets/confirm_dialog.dart';
-import '../shared/widgets/placeholder_screen.dart';
 import 'dev_scenario.dart';
 import 'mock_data.dart';
 
@@ -180,16 +184,23 @@ List<RouteBase> devOrganizerRoutes() => [
             GoRoute(path: '/dev/o/events', builder: (_, _) => const DevEventsTab()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: '/dev/o/vendors', builder: (_, _) => const PlaceholderScreen('Vendors')),
+            GoRoute(
+              path: '/dev/o/vendors',
+              builder: (_, state) => DevVendorsTab(initialCategory: state.uri.queryParameters['category']),
+            ),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: '/dev/o/profile', builder: (_, _) => const PlaceholderScreen('Profile')),
+            GoRoute(path: '/dev/o/profile', builder: (_, _) => const DevProfileTab()),
           ]),
         ],
       ),
       GoRoute(
         path: '/dev/o/event/:id',
         builder: (context, state) => DevEventDetail(eventId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/dev/o/vendor/:id',
+        builder: (context, state) => DevVendorDetail(vendorId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/dev/o/new-event',
@@ -241,6 +252,95 @@ List<RouteBase> devOrganizerRoutes() => [
         ),
       ),
     ];
+
+class DevVendorsTab extends StatefulWidget {
+  const DevVendorsTab({super.key, this.initialCategory});
+
+  final String? initialCategory;
+
+  @override
+  State<DevVendorsTab> createState() => _DevVendorsTabState();
+}
+
+class _DevVendorsTabState extends State<DevVendorsTab> {
+  late VendorFilters _filters = VendorFilters(category: widget.initialCategory);
+
+  @override
+  void didUpdateWidget(DevVendorsTab old) {
+    super.didUpdateWidget(old);
+    if (old.initialCategory != widget.initialCategory) {
+      _filters = VendorFilters(category: widget.initialCategory, priceTier: _filters.priceTier);
+    }
+  }
+
+  List<Vendor> get _matching => [
+        for (final v in _mock.vendors)
+          if ((_filters.category == null || v.categoryKeys.contains(_filters.category)) &&
+              (_filters.priceTier == null || v.priceTier == _filters.priceTier))
+            v,
+      ];
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder(
+      valueListenable: devScenario,
+      builder: (context, scenario, _) => VendorsView(
+        status: _status(scenario),
+        vendors: scenario == DevScenario.noEvents ? const [] : _matching,
+        filters: _filters,
+        categoryKeys: suggestedBudgetKeys.where((k) => _mock.vendors.any((v) => v.categoryKeys.contains(k))).toList(),
+        forEventName: _mock.wedding.name,
+        onFiltersChanged: (f) => setState(() => _filters = f),
+        onOpenVendor: (v) => context.push('/dev/o/vendor/${v.id}'),
+        onRetry: () => devScenario.value = DevScenario.normal,
+        onRefresh: () async => Future<void>.delayed(const Duration(milliseconds: 600)),
+      ),
+    );
+  }
+}
+
+class DevVendorDetail extends StatelessWidget {
+  const DevVendorDetail({super.key, required this.vendorId});
+
+  final String vendorId;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder(
+      valueListenable: devScenario,
+      builder: (context, scenario, _) => VendorDetailView(
+        status: _status(scenario),
+        vendor: _mock.vendors.firstWhere((v) => v.id == vendorId),
+        onCall: () => _toast(context, 'Call'),
+        onWhatsApp: () => _toast(context, 'Open WhatsApp'),
+        onOpenLink: (url) => _toast(context, 'Open $url'),
+        onRetry: () => devScenario.value = DevScenario.normal,
+      ),
+    );
+  }
+}
+
+class DevProfileTab extends StatelessWidget {
+  const DevProfileTab({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return OrganizerProfileView(
+      organizer: _mock.organizer,
+      onEdit: () => context.push('/dev/o/profile-setup'),
+      onSignOut: () async {
+        final yes = await showConfirmDialog(
+          context,
+          title: 'Sign out?',
+          message: 'You will need your phone number and a new code to sign back in.',
+          confirmLabel: 'Sign out',
+          destructive: true,
+        );
+        if (yes && context.mounted) _toast(context, 'Signed out');
+      },
+    );
+  }
+}
 
 /// Event detail with working mock interactions: edit tasks and budget, remove
 /// and restore tasks, generate the roadmap.
@@ -398,7 +498,8 @@ class _DevEventDetailState extends State<DevEventDetail> {
         }),
         onAddCategory: () => _openCategory(null),
         onEditCategory: _openCategory,
-        onBrowseVendors: (key) => context.go('/dev/o/vendors'),
+        onBrowseVendors: (key) =>
+            context.go(key == null ? '/dev/o/vendors' : '/dev/o/vendors?category=$key'),
       ),
     );
   }

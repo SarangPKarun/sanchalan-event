@@ -2,7 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/theme/app_spacing.dart';
+import '../features/organizer/event_stats.dart';
+import '../features/organizer/widgets/budget_widgets.dart';
+import '../features/organizer/widgets/event_card.dart';
+import '../features/organizer/widgets/hero_card.dart';
+import '../features/organizer/widgets/task_tile.dart';
+import '../features/organizer/widgets/vendor_card.dart';
 import '../models/enums.dart';
+import 'mock_data.dart';
 import '../shared/widgets/app_card.dart';
 import '../shared/widgets/app_text_field.dart';
 import '../shared/widgets/brand_mark.dart';
@@ -21,6 +28,8 @@ class GalleryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final mock = MockData();
+    final budget = budgetSummary(mock.wedding);
     return Scaffold(
       appBar: AppBar(title: const Text('Design gallery')),
       body: ListView(
@@ -123,6 +132,57 @@ class GalleryScreen extends StatelessWidget {
           const Skeleton(height: 20, width: 180),
           const SizedBox(height: AppSpace.s),
           const SkeletonCard(),
+          const SizedBox(height: AppSpace.xl),
+          const SectionHeader('Organizer: hero card'),
+          HeroCard(
+            event: mock.wedding,
+            progress: taskProgress(mock.wedding.tasks, today: mock.today),
+            today: mock.today,
+            onTap: () {},
+          ),
+          const SizedBox(height: AppSpace.xl),
+          const SectionHeader('Organizer: tasks'),
+          AppCard(
+            raised: false,
+            padding: const EdgeInsets.symmetric(horizontal: AppSpace.l, vertical: AppSpace.xs),
+            child: Column(
+              children: [
+                for (final id in ['t1', 't5', 't3', 't2']) ...[
+                  TaskTile(
+                    task: mock.weddingTasks.firstWhere((t) => t.id == id),
+                    today: mock.today,
+                    showCategory: true,
+                    onTap: () {},
+                  ),
+                  if (id != 't2') const Divider(),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpace.xl),
+          const SectionHeader('Organizer: budget'),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                BudgetBar(summary: budget),
+                const SizedBox(height: AppSpace.m),
+                BudgetLegend(summary: budget),
+                const SizedBox(height: AppSpace.s),
+                RemainingLabel(summary: budget),
+                const SizedBox(height: AppSpace.m),
+                RemainingLabel(summary: budgetSummary(mock.birthday)),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpace.xl),
+          const SectionHeader('Organizer: event cards'),
+          EventCard(event: mock.wedding, today: mock.today, onTap: () {}),
+          const SizedBox(height: AppSpace.m),
+          EventCard(event: mock.birthday, today: mock.today, onTap: () {}),
+          const SizedBox(height: AppSpace.xl),
+          const SectionHeader('Organizer: vendor card'),
+          VendorCard(vendor: mock.vendors.first, onTap: () {}),
           const SizedBox(height: AppSpace.xl),
           const SectionHeader('Empty and error'),
           AppCard(

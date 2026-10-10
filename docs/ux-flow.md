@@ -44,7 +44,7 @@ Not built (do not design): guests and RSVP, bookings, payments, reviews, documen
 | Phone | `/phone` | role, country, number; `POST /auth/otp/request` |
 | OTP | `/otp` | phone, role; `POST /auth/otp/verify`, resend |
 | Profile setup | `/profile-setup` | `POST /organizers/me/profile` |
-| Organizer home | `/home` (new, Phase 7 shell) | organizer, events, active event tasks and budget |
+| Organizer home | `/home` (new tab of the bottom-navigation shell: Home, Events, Vendors, Profile) | organizer, events, active event tasks and budget |
 | Events | `/events` | `GET /event-groups/me` |
 | New event | `/event-setup` | `POST /event-groups` |
 | Event detail | `/event-home/:id` | event with tasks and budget, task categories |

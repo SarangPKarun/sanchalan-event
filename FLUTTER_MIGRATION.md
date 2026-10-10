@@ -191,8 +191,8 @@ Write a one-page flow map (in `docs/ux-flow.md`) before any widget code. **Done:
 - `pinput` was tried and dropped: version 7 is built on the new separate `material_ui` package, whose `Material` and localizations are not the ones `package:flutter/material.dart` provides in Flutter 3.44, so it throws unless the whole app moves to `material_ui`. The code boxes are a small custom widget instead (a transparent text field over six boxes, so keyboard, paste and the one-time-code suggestion still work). SMS Retriever autofill is left for later because it needs a per-app hash in the SMS text.
 - Debug-only previews: run with `--dart-define=START_ROUTE=/dev` (or open the "Design previews" button on the sign-in placeholder) for `/dev/gallery`, `/dev/welcome`, `/dev/phone` and `/dev/otp` (code `123456` succeeds; a number ending 0000 fails to send).
 - 213 tests pass.### 6D. Organizer home (the screen after login)
-- [ ] **Bottom navigation:** Home · Events · Vendors · Profile (`StatefulShellRoute` in go_router).
-- [ ] **Home tab:**
+- [x] **Bottom navigation:** Home · Events · Vendors · Profile (`StatefulShellRoute` in go_router).
+- [x] **Home tab:**
   - greeting with the organizer's name;
   - active-event hero card: event name, days-to-go countdown, overall task progress ring;
   - "Next up": the 3 most urgent roadmap tasks, tap to open the task;
@@ -200,10 +200,16 @@ Write a one-page flow map (in `docs/ux-flow.md`) before any widget code. **Done:
   - quick actions: add task, add budget category, browse vendors;
   - event switcher when there are multiple events;
   - empty state with a "Plan your first event" CTA when there are none.
-- [ ] **Event detail** with tabs: Roadmap · Budget · Vendors. Guests/RSVP appear only as a "coming soon" card, because the backend has no API for them.
-- [ ] Roadmap generate, regenerate and restore stay easy to find, with a clear "AI is building your plan" loading state.
+- [x] **Event detail** with tabs: Roadmap · Budget · Vendors. Guests/RSVP appear only as a "coming soon" card, because the backend has no API for them.
+- [x] Roadmap generate, regenerate and restore stay easy to find, with a clear "AI is building your plan" loading state.
 
-### 6E. Vendor home (status-aware dashboard)
+**Done (milestone 2, part A), as plain widgets with data in and callbacks out, shown as mock-data previews in debug builds (`/dev`):**
+- `features/organizer/`: `organizer_shell.dart` (bottom navigation), `home_view.dart` with `widgets/hero_card.dart`, `events_view.dart`, `event_detail_view.dart` (Roadmap, Budget, Vendors tabs in `roadmap_tab.dart`, `budget_tab.dart`, `event_vendors_tab.dart`), `event_form_view.dart` (create and edit), `profile_setup_view.dart`, `vendors_view.dart`, `vendor_detail_view.dart`, `organizer_profile_view.dart`. Sheets in `sheets/`: task, budget category, re-run roadmap; plus `shared/widgets/confirm_dialog.dart`.
+- Pure logic with unit tests: `core/format.dart` (rupees with Indian grouping, dates, labels) and `features/organizer/event_stats.dart` (progress, next up, overdue, budget, grouping). A task that is open and past its due date counts as overdue on the phone even if the server has not flagged it.
+- The roadmap generation wait has its own `GeneratingView` (steps shown over time).
+- Main actions are pinned to the bottom of screens and sheets (`BottomActionBar`, sheet footer) so they never fall below the fold on a small phone.
+- Phase 7 notes: the dev shell already uses `StatefulShellRoute`; in the real router `/events` and `/vendors` become tabs of that shell, `/home` is added, and `redirectFor` and its tests are updated then. Call, WhatsApp and links need the `url_launcher` package, added in Phase 7.
+- `/dev` previews: Organizer app (with a Normal / No events / Loading / Error scenario switcher), Event detail (tasks and budget editable), Event without a roadmap (generate flow), New and Edit event, Profile setup, Vendor detail.### 6E. Vendor home (status-aware dashboard)
 - [ ] **draft:** "Complete your profile" checklist with a % complete bar and a CTA to the next missing item.
 - [ ] **pending_review:** friendly under-review screen with a timeline (submitted → being reviewed → live) and an "edit while you wait" option if the backend allows it.
 - [ ] **published:** profile preview card as organizers see it, plus the past-work list.

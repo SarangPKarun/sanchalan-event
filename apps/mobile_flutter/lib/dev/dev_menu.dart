@@ -13,6 +13,7 @@ class DevEntry {
 }
 
 const devEntries = [
+  DevEntry('/dev/o/vendor/v1', 'Vendor detail', 'Facts, past work, links, Call and WhatsApp'),
   DevEntry('/dev/o/event/ev-wedding', 'Event detail', 'Roadmap, Budget and Vendors tabs; tasks and budget are editable'),
   DevEntry('/dev/o/event/ev-new', 'Event without a roadmap', 'Generate flow with the waiting screen'),
   DevEntry('/dev/o/new-event', 'New event form', 'A name containing "fail" shows the error state'),
