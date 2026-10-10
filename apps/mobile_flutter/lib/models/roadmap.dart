@@ -22,8 +22,8 @@ class TaskWithDependencies {
     this.ownerUserId,
     this.linkedVendorId,
     this.linkedBudgetCategoryId,
-    required this.createdAt,
-    required this.updatedAt,
+    this.createdAt,
+    this.updatedAt,
     required this.categoryKey,
     required this.dependsOnTaskIds,
     required this.dependentTaskIds,
@@ -45,8 +45,9 @@ class TaskWithDependencies {
   final String? ownerUserId;
   final String? linkedVendorId;
   final String? linkedBudgetCategoryId;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  /// Absent on POST /event-groups/:id/generate-roadmap responses.
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
   final String categoryKey;
   @JsonKey(defaultValue: <String>[])
   final List<String> dependsOnTaskIds;

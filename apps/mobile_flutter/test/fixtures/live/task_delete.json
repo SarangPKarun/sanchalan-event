@@ -1,0 +1,17 @@
+{
+  "id": "c321a8af-66fd-43ff-a9de-612a64fe0b5b",
+  "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+  "subEventId": null,
+  "taskCategoryId": "892a91cd-1e3c-41f9-a4fd-030aa5949fc8",
+  "name": "Buy gifts",
+  "description": null,
+  "status": "not_applicable",
+  "dueDate": "2027-01-20",
+  "source": "user_added",
+  "ownerType": "organizer",
+  "ownerUserId": null,
+  "linkedVendorId": null,
+  "linkedBudgetCategoryId": null,
+  "createdAt": "2026-10-10T11:32:03.445Z",
+  "updatedAt": "2026-10-10T11:32:05.318Z"
+}

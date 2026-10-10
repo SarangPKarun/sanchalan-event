@@ -1,0 +1,52 @@
+{
+  "categories": [
+    {
+      "id": "892a91cd-1e3c-41f9-a4fd-030aa5949fc8",
+      "categoryKey": "attire"
+    },
+    {
+      "id": "53b9b633-3843-4256-bd75-2579a2cf2ddc",
+      "categoryKey": "catering"
+    },
+    {
+      "id": "24a04f2a-42a6-4c62-aa84-b080e4fb054a",
+      "categoryKey": "decor"
+    },
+    {
+      "id": "797fe6f9-7535-4f1e-82a2-13b599adb33c",
+      "categoryKey": "guest_logistics"
+    },
+    {
+      "id": "dc53b3b5-9f6d-4b4e-b2f8-7f779f051a63",
+      "categoryKey": "invitations"
+    },
+    {
+      "id": "89d713f3-3b8c-4a54-b5e4-b3a7d5bf40a7",
+      "categoryKey": "legal_documentation"
+    },
+    {
+      "id": "604cad9a-96ff-43ec-b3e0-ea4f061a6914",
+      "categoryKey": "misc"
+    },
+    {
+      "id": "ad25ce30-00e4-44ed-b90f-63add8968cc4",
+      "categoryKey": "music_entertainment"
+    },
+    {
+      "id": "1dffaa8c-204a-4f4c-b47d-95e5ffc6712f",
+      "categoryKey": "photography"
+    },
+    {
+      "id": "054605ee-15b0-4af8-a095-5682f04e7247",
+      "categoryKey": "priest_officiant"
+    },
+    {
+      "id": "15c3bb69-6330-4314-85e2-e9ba0312f429",
+      "categoryKey": "transport"
+    },
+    {
+      "id": "da35973e-3e47-48d9-b906-5077baa60413",
+      "categoryKey": "venue"
+    }
+  ]
+}

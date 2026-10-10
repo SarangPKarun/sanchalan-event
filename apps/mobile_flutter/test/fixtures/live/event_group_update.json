@@ -1,0 +1,75 @@
+{
+  "eventGroup": {
+    "id": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+    "organizerId": "57fe9f5e-38dd-4cf1-bafa-9ef099e03a1d",
+    "eventType": "wedding",
+    "name": "Priya & Rohan",
+    "region": "Pune",
+    "religionOrTradition": null,
+    "totalBudget": 1800000,
+    "budgetTier": "standard",
+    "guestCountEstimate": 250,
+    "primaryDate": "2027-02-14",
+    "status": "planning",
+    "createdAt": "2026-10-10T11:31:37.954Z"
+  },
+  "budgetCategories": [
+    {
+      "id": "da42ea25-5448-41fb-a495-370b6ba57021",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "categoryKey": "catering",
+      "allocatedAmount": 630000,
+      "budgetTierOverride": null
+    },
+    {
+      "id": "2dc49a88-0b45-4198-af95-18886a2775a5",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "categoryKey": "venue",
+      "allocatedAmount": 360000,
+      "budgetTierOverride": null
+    },
+    {
+      "id": "7fbf8d11-5385-4796-976f-a90b633850a9",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "categoryKey": "decor_and_design",
+      "allocatedAmount": 270000,
+      "budgetTierOverride": null
+    },
+    {
+      "id": "a42132b2-6a09-4f42-bad0-d2a90fa450d8",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "categoryKey": "photography_and_media",
+      "allocatedAmount": 144000,
+      "budgetTierOverride": null
+    },
+    {
+      "id": "43d91157-ff02-49dd-96b2-1b774d1eec1e",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "categoryKey": "attire_and_makeup",
+      "allocatedAmount": 144000,
+      "budgetTierOverride": null
+    },
+    {
+      "id": "60387a07-198f-4e63-9cce-e6b673195175",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "categoryKey": "entertainment_and_music",
+      "allocatedAmount": 90000,
+      "budgetTierOverride": null
+    },
+    {
+      "id": "f4e413ba-b4e3-4533-86a2-e66f2b0e776f",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "categoryKey": "transport_and_logistics",
+      "allocatedAmount": 72000,
+      "budgetTierOverride": null
+    },
+    {
+      "id": "6113202e-3709-47a9-a20e-71d9a4d53d23",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "categoryKey": "contingency",
+      "allocatedAmount": 90000,
+      "budgetTierOverride": null
+    }
+  ],
+  "warning": null
+}

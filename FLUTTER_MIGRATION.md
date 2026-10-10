@@ -109,8 +109,10 @@ Port from `apps/mobile/lib/`:
 
 **Status: done (code and tests).** `lib/core/{auth_storage,api_client,providers,config}.dart`, `lib/models/*` and 39 tests are in place, `flutter analyze` is clean.
 - The tests found a bug the RN `api.ts` also has: with a dead session, each concurrent request cleared the tokens and fired the expiry action separately. The Dart client now ends the session once, inside the shared refresh.
-- Vendor `startingPrice` is a Prisma Decimal that the backend sends as a **string**; the models accept both strings and numbers for money.
-- [ ] Still open: check the models against real backend responses (needs a **local** database; `apps/backend/.env` points at Neon, so don't run the backend as-is for testing).
+- Money fields accept numbers or numeric strings, so a Decimal serialization change on the backend can't crash the app (`startingPrice` currently arrives as a number).
+- [x] Models checked against real backend responses (recorded from a throwaway Neon database, saved in `apps/mobile_flutter/test/fixtures/live/`, 55 tests green). Findings:
+  - `POST /event-groups/:id/generate-roadmap` returns tasks **without** `createdAt` / `updatedAt` (shared-types says they exist), so `TaskWithDependencies` makes them optional.
+  - `DELETE /event-groups/:id` returned a 500 on the remote database: it runs about 20 queries in one Prisma transaction and exceeded the default 5 s limit (network latency to Neon). Backend issue, not fixed here; consider a longer `$transaction` timeout. No fixture was recorded for it.
 
 ## 4. State management
 

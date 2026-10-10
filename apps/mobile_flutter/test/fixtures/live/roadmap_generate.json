@@ -1,0 +1,195 @@
+{
+  "tasks": [
+    {
+      "id": "3fc5f846-2250-4609-80f2-e60216e377cf",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "taskCategoryId": "da35973e-3e47-48d9-b906-5077baa60413",
+      "name": "Book venue",
+      "status": "not_started",
+      "dueDate": "2026-10-17",
+      "source": "ai_generated",
+      "ownerType": "organizer",
+      "categoryKey": "venue",
+      "dependsOnTaskIds": []
+    },
+    {
+      "id": "54b67796-42b0-432d-ade9-7f992b7c9322",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "taskCategoryId": "797fe6f9-7535-4f1e-82a2-13b599adb33c",
+      "name": "Finalize guest count",
+      "status": "not_started",
+      "dueDate": "2026-11-06",
+      "source": "ai_generated",
+      "ownerType": "organizer",
+      "categoryKey": "guest_logistics",
+      "dependsOnTaskIds": []
+    },
+    {
+      "id": "1562d365-3bc2-41af-a23f-6db876cc3a59",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "taskCategoryId": "53b9b633-3843-4256-bd75-2579a2cf2ddc",
+      "name": "Book catering",
+      "status": "not_started",
+      "dueDate": "2026-11-16",
+      "source": "ai_generated",
+      "ownerType": "organizer",
+      "categoryKey": "catering",
+      "dependsOnTaskIds": [
+        "54b67796-42b0-432d-ade9-7f992b7c9322"
+      ]
+    },
+    {
+      "id": "8526baed-bcb9-4d29-97e2-01c47dfeddf8",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "taskCategoryId": "1dffaa8c-204a-4f4c-b47d-95e5ffc6712f",
+      "name": "Book photographer",
+      "status": "not_started",
+      "dueDate": "2026-11-16",
+      "source": "ai_generated",
+      "ownerType": "organizer",
+      "categoryKey": "photography",
+      "dependsOnTaskIds": []
+    },
+    {
+      "id": "edbab141-8169-4df8-8b0a-0e86d7d4bdc3",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "taskCategoryId": "24a04f2a-42a6-4c62-aa84-b080e4fb054a",
+      "name": "Book decor vendor",
+      "status": "not_started",
+      "dueDate": "2026-12-16",
+      "source": "ai_generated",
+      "ownerType": "organizer",
+      "categoryKey": "decor",
+      "dependsOnTaskIds": [
+        "3fc5f846-2250-4609-80f2-e60216e377cf"
+      ]
+    },
+    {
+      "id": "b1d07eeb-7423-4d6d-aca0-c2f3e88b37db",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "taskCategoryId": "dc53b3b5-9f6d-4b4e-b2f8-7f779f051a63",
+      "name": "Send invitations",
+      "status": "not_started",
+      "dueDate": "2026-12-16",
+      "source": "ai_generated",
+      "ownerType": "organizer",
+      "categoryKey": "invitations",
+      "dependsOnTaskIds": [
+        "54b67796-42b0-432d-ade9-7f992b7c9322"
+      ]
+    },
+    {
+      "id": "85fc21c5-b7ff-4b31-8705-d49ee6806750",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "taskCategoryId": "ad25ce30-00e4-44ed-b90f-63add8968cc4",
+      "name": "Book music & entertainment",
+      "status": "not_started",
+      "dueDate": "2026-12-16",
+      "source": "ai_generated",
+      "ownerType": "organizer",
+      "categoryKey": "music_entertainment",
+      "dependsOnTaskIds": []
+    },
+    {
+      "id": "70dfb2f5-c097-47c5-b570-a57b26e1941a",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "taskCategoryId": "53b9b633-3843-4256-bd75-2579a2cf2ddc",
+      "name": "Finalize catering menu",
+      "status": "not_started",
+      "dueDate": "2026-12-31",
+      "source": "ai_generated",
+      "ownerType": "organizer",
+      "categoryKey": "catering",
+      "dependsOnTaskIds": [
+        "1562d365-3bc2-41af-a23f-6db876cc3a59"
+      ]
+    },
+    {
+      "id": "bb372bd9-c463-46e4-902e-0efa6646d79b",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "taskCategoryId": "054605ee-15b0-4af8-a095-5682f04e7247",
+      "name": "Book priest/officiant",
+      "status": "not_started",
+      "dueDate": "2026-12-31",
+      "source": "ai_generated",
+      "ownerType": "organizer",
+      "categoryKey": "priest_officiant",
+      "dependsOnTaskIds": []
+    },
+    {
+      "id": "b6827a4d-7932-4714-bf0b-44d880085de2",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "taskCategoryId": "892a91cd-1e3c-41f9-a4fd-030aa5949fc8",
+      "name": "Finalize attire",
+      "status": "not_started",
+      "dueDate": "2026-12-31",
+      "source": "ai_generated",
+      "ownerType": "organizer",
+      "categoryKey": "attire",
+      "dependsOnTaskIds": []
+    },
+    {
+      "id": "3ca340a4-dd23-4399-b104-649aecd370e4",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "taskCategoryId": "ad25ce30-00e4-44ed-b90f-63add8968cc4",
+      "name": "Book Dhol Tasha Pathak for Procession",
+      "status": "not_started",
+      "dueDate": "2026-12-31",
+      "source": "ai_generated",
+      "ownerType": "organizer",
+      "categoryKey": "music_entertainment",
+      "dependsOnTaskIds": []
+    },
+    {
+      "id": "bee34111-9895-43e3-8cd1-c537b621ddc7",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "taskCategoryId": "15c3bb69-6330-4314-85e2-e9ba0312f429",
+      "name": "Arrange transport",
+      "status": "not_started",
+      "dueDate": "2027-01-15",
+      "source": "ai_generated",
+      "ownerType": "organizer",
+      "categoryKey": "transport",
+      "dependsOnTaskIds": []
+    },
+    {
+      "id": "37810fb9-667f-432c-bfe6-f7742a0f3321",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "taskCategoryId": "89d713f3-3b8c-4a54-b5e4-b3a7d5bf40a7",
+      "name": "Prepare marriage registration documents",
+      "status": "not_started",
+      "dueDate": "2027-01-15",
+      "source": "ai_generated",
+      "ownerType": "organizer",
+      "categoryKey": "legal_documentation",
+      "dependsOnTaskIds": []
+    },
+    {
+      "id": "5566b943-9b86-408a-a850-6d21047163ee",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "taskCategoryId": "797fe6f9-7535-4f1e-82a2-13b599adb33c",
+      "name": "Confirm final headcount",
+      "status": "not_started",
+      "dueDate": "2027-02-07",
+      "source": "ai_generated",
+      "ownerType": "organizer",
+      "categoryKey": "guest_logistics",
+      "dependsOnTaskIds": [
+        "b1d07eeb-7423-4d6d-aca0-c2f3e88b37db"
+      ]
+    },
+    {
+      "id": "2878df01-c89b-4126-b9ac-163ff6e461a3",
+      "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+      "taskCategoryId": "604cad9a-96ff-43ec-b3e0-ea4f061a6914",
+      "name": "Complete vendor final payments",
+      "status": "not_started",
+      "dueDate": "2027-02-07",
+      "source": "ai_generated",
+      "ownerType": "organizer",
+      "categoryKey": "misc",
+      "dependsOnTaskIds": []
+    }
+  ],
+  "removedTaskCount": 0
+}

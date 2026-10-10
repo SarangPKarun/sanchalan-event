@@ -1,0 +1,31 @@
+[
+  {
+    "id": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+    "organizerId": "57fe9f5e-38dd-4cf1-bafa-9ef099e03a1d",
+    "eventType": "wedding",
+    "name": "Priya & Rohan",
+    "region": "Pune",
+    "religionOrTradition": null,
+    "totalBudget": 1500000,
+    "budgetTier": "standard",
+    "guestCountEstimate": 250,
+    "primaryDate": "2027-02-14",
+    "status": "planning",
+    "createdAt": "2026-10-10T11:31:37.954Z",
+    "subEvents": [
+      {
+        "id": "e94fdf18-d024-4a57-be39-0bf16717be7f",
+        "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+        "name": "Priya & Rohan",
+        "subEventType": null,
+        "date": "2027-02-14",
+        "startTime": null,
+        "endTime": null,
+        "venueName": null,
+        "venueAddress": null,
+        "expectedGuestCount": 250,
+        "status": "planned"
+      }
+    ]
+  }
+]

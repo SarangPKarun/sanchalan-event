@@ -1,0 +1,10 @@
+{
+  "budgetCategory": {
+    "id": "ed1f14b9-ba97-45e1-a788-0dc904f60e59",
+    "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+    "categoryKey": "gifts",
+    "allocatedAmount": 90000,
+    "budgetTierOverride": "premium"
+  },
+  "warning": "Allocated budget (1,590,000) exceeds total budget (1,500,000) by 90,000."
+}

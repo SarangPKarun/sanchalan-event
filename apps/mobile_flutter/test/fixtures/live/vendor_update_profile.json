@@ -1,0 +1,33 @@
+{
+  "vendor": {
+    "id": "3eb09a34-1ca2-4f87-9302-dae7138b64de",
+    "businessName": "Shubh Photos",
+    "contactPersonName": "Asha",
+    "phoneNumber": "+919000000002",
+    "email": null,
+    "priceTier": "premium",
+    "serviceArea": "Pune",
+    "description": "Candid wedding photography across Pune and Mumbai, 7 years of experience.",
+    "yearsOfExperience": 7,
+    "startingPrice": 50000,
+    "instagramUrl": null,
+    "websiteUrl": null,
+    "whatsappNumber": null,
+    "status": "draft",
+    "rejectionReason": null,
+    "submittedAt": null,
+    "reviewedAt": null,
+    "reviewedBy": null,
+    "createdAt": "2026-10-10T11:32:32.556Z",
+    "vendorVendorCategories": [],
+    "portfolioItems": [],
+    "completeness": {
+      "complete": false,
+      "missing": [
+        "categories",
+        "pastWork"
+      ]
+    }
+  },
+  "reverificationTriggered": false
+}

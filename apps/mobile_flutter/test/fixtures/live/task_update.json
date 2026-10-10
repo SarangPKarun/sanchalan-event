@@ -1,0 +1,17 @@
+{
+  "id": "b6827a4d-7932-4714-bf0b-44d880085de2",
+  "eventGroupId": "8e1fd3b5-e2fb-4d50-a2c1-45857b4c257f",
+  "subEventId": null,
+  "taskCategoryId": "892a91cd-1e3c-41f9-a4fd-030aa5949fc8",
+  "name": "Finalize attire",
+  "description": null,
+  "status": "in_progress",
+  "dueDate": "2027-01-10",
+  "source": "ai_generated",
+  "ownerType": "organizer",
+  "ownerUserId": null,
+  "linkedVendorId": null,
+  "linkedBudgetCategoryId": null,
+  "createdAt": "2026-10-10T11:31:53.851Z",
+  "updatedAt": "2026-10-10T11:32:01.398Z"
+}

@@ -24,8 +24,12 @@ TaskWithDependencies _$TaskWithDependenciesFromJson(
   ownerUserId: json['ownerUserId'] as String?,
   linkedVendorId: json['linkedVendorId'] as String?,
   linkedBudgetCategoryId: json['linkedBudgetCategoryId'] as String?,
-  createdAt: DateTime.parse(json['createdAt'] as String),
-  updatedAt: DateTime.parse(json['updatedAt'] as String),
+  createdAt: json['createdAt'] == null
+      ? null
+      : DateTime.parse(json['createdAt'] as String),
+  updatedAt: json['updatedAt'] == null
+      ? null
+      : DateTime.parse(json['updatedAt'] as String),
   categoryKey: json['categoryKey'] as String,
   dependsOnTaskIds:
       (json['dependsOnTaskIds'] as List<dynamic>?)
@@ -55,8 +59,8 @@ Map<String, dynamic> _$TaskWithDependenciesToJson(
   'ownerUserId': instance.ownerUserId,
   'linkedVendorId': instance.linkedVendorId,
   'linkedBudgetCategoryId': instance.linkedBudgetCategoryId,
-  'createdAt': instance.createdAt.toIso8601String(),
-  'updatedAt': instance.updatedAt.toIso8601String(),
+  'createdAt': instance.createdAt?.toIso8601String(),
+  'updatedAt': instance.updatedAt?.toIso8601String(),
   'categoryKey': instance.categoryKey,
   'dependsOnTaskIds': instance.dependsOnTaskIds,
   'dependentTaskIds': instance.dependentTaskIds,
