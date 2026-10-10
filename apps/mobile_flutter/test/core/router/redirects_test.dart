@@ -171,4 +171,22 @@ void main() {
       }
     }
   });
+
+  group('debug design previews', () {
+    test('/dev routes are open in debug builds, for every state', () {
+      for (final g in [loading, unauthed, admin, organizer(OrganizerPhase.loading), vendor(VendorPhase.draft)]) {
+        expect(redirectFor('/dev', g, allowDev: true), isNull);
+        expect(redirectFor('/dev/gallery', g, allowDev: true), isNull);
+      }
+    });
+
+    test('/dev routes are guarded like any other path in release builds', () {
+      expect(redirectFor('/dev', unauthed, allowDev: false), AppPaths.phone);
+      expect(redirectFor('/dev/gallery', organizer(OrganizerPhase.ready), allowDev: false), AppPaths.events);
+    });
+
+    test('a path that only starts with the letters dev is not a preview', () {
+      expect(redirectFor('/device', unauthed, allowDev: true), AppPaths.phone);
+    });
+  });
 }

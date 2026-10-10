@@ -5,6 +5,9 @@ abstract final class AppPaths {
   static const splash = '/splash';
   static const unsupportedRole = '/unsupported-role';
 
+  // Debug-only design previews (see lib/dev)
+  static const dev = '/dev';
+
   // Auth
   static const phone = '/phone';
   static const otp = '/otp';

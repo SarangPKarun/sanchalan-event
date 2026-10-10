@@ -1,7 +1,10 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../dev/dev_menu.dart';
+import '../../dev/gallery_screen.dart';
 import '../../features/auth/unsupported_role_screen.dart';
 import '../../features/organizer/organizer_providers.dart';
 import '../../features/vendor/vendor_providers.dart';
@@ -9,6 +12,7 @@ import '../../models/enums.dart';
 import '../../shared/widgets/data_error_screen.dart';
 import '../../shared/widgets/data_loading_screen.dart';
 import '../../shared/widgets/placeholder_screen.dart';
+import '../../shared/widgets/primary_button.dart';
 import 'guard_state.dart';
 import 'paths.dart';
 import 'redirects.dart';
@@ -31,15 +35,38 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.listen(guardStateProvider, (_, _) => refresh.value++);
 
   final router = GoRouter(
-    initialLocation: AppPaths.splash,
+    // Debug builds can open straight on a preview:
+    // flutter run --dart-define=START_ROUTE=/dev/gallery
+    initialLocation: kDebugMode
+        ? const String.fromEnvironment('START_ROUTE', defaultValue: AppPaths.splash)
+        : AppPaths.splash,
     refreshListenable: refresh,
     redirect: (context, state) => redirectFor(state.uri.toString(), ref.read(guardStateProvider)),
     routes: [
       _route(AppPaths.splash, (_) => const DataLoadingScreen()),
       _route(AppPaths.unsupportedRole, (_) => const UnsupportedRoleScreen()),
 
+      // Design previews: debug builds only
+      if (kDebugMode) ...[
+        _route(AppPaths.dev, (_) => const DevMenuScreen()),
+        _route('${AppPaths.dev}/gallery', (_) => const GalleryScreen()),
+      ],
+
       // Auth
-      _route(AppPaths.phone, (_) => const PlaceholderScreen('Sign in')),
+      GoRoute(
+        path: AppPaths.phone,
+        builder: (context, state) => PlaceholderScreen(
+          'Sign in',
+          actions: [
+            if (kDebugMode)
+              SecondaryButton(
+                label: 'Design previews',
+                expand: false,
+                onPressed: () => context.push(AppPaths.dev),
+              ),
+          ],
+        ),
+      ),
       _route(
         AppPaths.otp,
         (state) {

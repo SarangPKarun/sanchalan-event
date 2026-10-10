@@ -160,7 +160,7 @@ Redirect rules:
 Goal: a friendly, modern app that a first-time family organizer or a small vendor can use without help. Do this phase **before** building screens, so Phase 7 builds from approved designs.
 
 ### 6A. Understand the app first
-Write a one-page flow map (in `docs/ux-flow.md`) before any widget code.
+Write a one-page flow map (in `docs/ux-flow.md`) before any widget code. **Done: `docs/ux-flow.md`.**
 
 - **Organizer goals:** plan an event, get an AI roadmap of tasks, keep the budget under control, find and shortlist vendors.
 - **Vendor goals:** get listed, pass admin review, show past work, stay visible.
@@ -169,14 +169,16 @@ Write a one-page flow map (in `docs/ux-flow.md`) before any widget code.
 - Users are likely non-technical and on mid-range Android phones with patchy networks. Design for that: big touch targets, plain language, fast first paint.
 
 ### 6B. Design system (`lib/core/theme/`, `lib/shared/widgets/`)
-- [ ] Color tokens: a warm, celebratory palette (primary, secondary, surface, success/warning/error, status colors for task and vendor states). Light theme only.
-- [ ] Typography scale with `google_fonts` (one display face for headings, one readable body face).
-- [ ] Spacing, radius and elevation tokens (4/8/12/16/24 spacing; rounded cards).
-- [ ] One Material 3 `ThemeData` built from the tokens (`app_theme.dart`). No hardcoded colors or sizes in screens.
-- [ ] Reusable widgets: `PrimaryButton`, `SecondaryButton`, `AppCard`, `StatusChip`, `SectionHeader`, `EmptyState`, `ProgressRing`, `AppTextField`, `Skeleton`, `ErrorRetry`.
-- [ ] Icon set (Material Symbols) and a small illustration set for empty states and onboarding.
-- [ ] Motion rules: short (150-300 ms) transitions, hero transitions for event cards, no decorative animation that slows the app.
-- [ ] A widget gallery screen (debug only) showing every component, so the system can be reviewed in one place.
+- [x] Color tokens: a warm, celebratory palette (primary, secondary, surface, success/warning/error, status colors for task and vendor states). Light theme only.
+- [x] Typography scale with `google_fonts` (one display face for headings, one readable body face).
+- [x] Spacing, radius and elevation tokens (4/8/12/16/24 spacing; rounded cards).
+- [x] One Material 3 `ThemeData` built from the tokens (`app_theme.dart`). No hardcoded colors or sizes in screens.
+- [x] Reusable widgets: `PrimaryButton`, `SecondaryButton`, `AppCard`, `StatusChip`, `SectionHeader`, `EmptyState`, `ProgressRing`, `AppTextField`, `Skeleton`, `ErrorRetry`.
+- [x] Icon set (Material Symbols) and a small illustration set for empty states and onboarding.
+- [x] Motion rules: short (150-300 ms) transitions, hero transitions for event cards, no decorative animation that slows the app.
+- [x] A widget gallery screen (debug only) showing every component, so the system can be reviewed in one place.
+
+**Done (milestone 1).** Look: *warm festive*. Tokens are in `lib/core/theme/` (`app_colors.dart`, `app_typography.dart`, `app_spacing.dart`, `app_theme.dart`): deep saffron primary `#B64D08`, maroon `#7A1F2B`, gold `#D9A21B`, cream background `#FFF8EF`. Fonts: Playfair Display for headings and Nunito Sans for body, both bundled as variable fonts in `assets/fonts` (SIL OFL licenses alongside), so text never needs the network. Every text/background pair is checked for WCAG AA in `test/core/theme/contrast_test.dart` (which caught two failing pairs, now fixed). Widgets are in `lib/shared/widgets/`; the debug-only `/dev/gallery` shows all of them. The brand mark is a placeholder diya drawn in code until there is a real logo. Empty-state illustrations use icons for now instead of an SVG set. Pixel goldens are skipped because the test environment has no real fonts.
 
 ### 6C. Login revamp
 - [ ] **Welcome screen:** logo, one-line promise ("Plan every celebration, stress-free"), "Get started" button. Replaces the plain splash.

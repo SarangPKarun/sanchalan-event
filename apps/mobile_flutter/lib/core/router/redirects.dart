@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../features/auth/auth_state.dart';
 import '../../models/enums.dart';
 import 'guard_state.dart';
@@ -6,9 +8,14 @@ import 'paths.dart';
 /// Where to send the user from [location], or null to stay. Replaces the
 /// `Stack.Protected` guards of the React Native layouts. Pure, so it is
 /// unit-tested as a table; go_router just calls it.
-String? redirectFor(String location, GuardState g) {
+///
+/// [allowDev] lets the debug-only `/dev` design previews through the guards;
+/// it is false in release builds.
+String? redirectFor(String location, GuardState g, {bool allowDev = kDebugMode}) {
   final path = Uri.parse(location).path;
   String? to(String target) => path == target ? null : target;
+
+  if (allowDev && (path == AppPaths.dev || path.startsWith('${AppPaths.dev}/'))) return null;
 
   switch (g.auth.status) {
     case AuthStatus.loading:
