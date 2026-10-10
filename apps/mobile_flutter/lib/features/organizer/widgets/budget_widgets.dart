@@ -53,6 +53,8 @@ class BudgetBar extends StatelessWidget {
                   // When over-allocated, scale down so the bar still fits.
                   final scale = totalFraction > 1 ? 1 / totalFraction : 1.0;
                   return Row(
+                    // Stretch so each segment fills the bar's height (a childless box would be 0 high).
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       for (final (color, fraction) in segs)
                         SizedBox(

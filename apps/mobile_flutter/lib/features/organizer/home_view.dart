@@ -137,16 +137,24 @@ class HomeView extends StatelessWidget {
           onTap: onOpenEvent == null ? null : () => onOpenEvent!(event.id),
         ),
         const SizedBox(height: AppSpace.l),
-        Row(
-          children: [
-            Expanded(child: _QuickAction(icon: Icons.add_task, label: 'Add task', onTap: onAddTask)),
-            const SizedBox(width: AppSpace.m),
-            Expanded(
-              child: _QuickAction(icon: Icons.account_balance_wallet_outlined, label: 'Add budget item', onTap: onAddCategory),
-            ),
-            const SizedBox(width: AppSpace.m),
-            Expanded(child: _QuickAction(icon: Icons.storefront_outlined, label: 'Find vendors', onTap: onFindVendors)),
-          ],
+        // Equal heights even when one label wraps to two lines.
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: _QuickAction(icon: Icons.add_task, label: 'Add task', onTap: onAddTask)),
+              const SizedBox(width: AppSpace.m),
+              Expanded(
+                child: _QuickAction(
+                  icon: Icons.account_balance_wallet_outlined,
+                  label: 'Add budget item',
+                  onTap: onAddCategory,
+                ),
+              ),
+              const SizedBox(width: AppSpace.m),
+              Expanded(child: _QuickAction(icon: Icons.storefront_outlined, label: 'Find vendors', onTap: onFindVendors)),
+            ],
+          ),
         ),
         const SizedBox(height: AppSpace.xl),
         SectionHeader(
