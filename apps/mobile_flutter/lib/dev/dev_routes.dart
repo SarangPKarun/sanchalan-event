@@ -5,6 +5,7 @@ import '../features/auth/otp_screen.dart';
 import '../features/auth/phone_screen.dart';
 import '../features/auth/welcome_screen.dart';
 import 'dev_menu.dart';
+import 'dev_organizer.dart';
 import 'gallery_screen.dart';
 
 const _previewPhone = '+91 98765 43210';
@@ -15,6 +16,7 @@ void _toast(BuildContext context, String message) =>
 /// Debug-only preview routes (mock data, no network). Added to the router only
 /// in debug builds.
 List<RouteBase> devRoutes() => [
+      ...devOrganizerRoutes(),
       GoRoute(path: '/dev', builder: (context, state) => const DevMenuScreen()),
       GoRoute(path: '/dev/gallery', builder: (context, state) => const GalleryScreen()),
       GoRoute(

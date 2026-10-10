@@ -13,6 +13,7 @@ class DevEntry {
 }
 
 const devEntries = [
+  DevEntry('/dev/o/home', 'Organizer app', 'Home, Events, Vendors, Profile with a data scenario switcher'),
   DevEntry('/dev/gallery', 'Design gallery', 'Colors, type and every widget'),
   DevEntry('/dev/welcome', 'Welcome to sign-in flow', 'Welcome, then phone, then OTP (mock)'),
   DevEntry('/dev/phone', 'Phone number', 'Role choice and number entry (mock)'),

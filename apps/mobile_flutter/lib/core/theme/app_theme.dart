@@ -168,6 +168,12 @@ ThemeData buildAppTheme() {
       contentTextStyle: textTheme.bodyMedium!.copyWith(color: AppColors.surface),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.m)),
     ),
+    floatingActionButtonTheme: FloatingActionButtonThemeData(
+      backgroundColor: AppColors.primary,
+      foregroundColor: AppColors.onPrimary,
+      extendedTextStyle: textTheme.labelLarge,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.l)),
+    ),
     dividerTheme: const DividerThemeData(color: AppColors.outline, space: 1, thickness: 1),
     progressIndicatorTheme: const ProgressIndicatorThemeData(
       color: AppColors.primary,

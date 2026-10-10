@@ -24,49 +24,70 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpace.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ExcludeSemantics(
-              child: Container(
-                width: 112,
-                height: 112,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.goldContainer,
-                  border: Border.all(color: AppColors.gold, width: 2),
-                ),
-                child: Center(
-                  child: Container(
-                    width: 80,
-                    height: 80,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.primaryContainer,
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: constraints.maxHeight.isFinite
+                ? constraints.maxHeight
+                : 0,
+          ),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpace.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ExcludeSemantics(
+                    child: Container(
+                      width: 112,
+                      height: 112,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.goldContainer,
+                        border: Border.all(color: AppColors.gold, width: 2),
+                      ),
+                      child: Center(
+                        child: Container(
+                          width: 80,
+                          height: 80,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.primaryContainer,
+                          ),
+                          child: Icon(icon, size: 40, color: AppColors.primary),
+                        ),
+                      ),
                     ),
-                    child: Icon(icon, size: 40, color: AppColors.primary),
                   ),
-                ),
+                  const SizedBox(height: AppSpace.xl),
+                  Text(
+                    title,
+                    style: text.headlineSmall,
+                    textAlign: TextAlign.center,
+                  ),
+                  if (message != null) ...[
+                    const SizedBox(height: AppSpace.s),
+                    Text(
+                      message!,
+                      style: text.bodyMedium?.copyWith(
+                        color: AppColors.inkMuted,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                  if (actionLabel != null) ...[
+                    const SizedBox(height: AppSpace.xl),
+                    PrimaryButton(
+                      label: actionLabel!,
+                      onPressed: onAction,
+                      expand: false,
+                    ),
+                  ],
+                ],
               ),
             ),
-            const SizedBox(height: AppSpace.xl),
-            Text(title, style: text.headlineSmall, textAlign: TextAlign.center),
-            if (message != null) ...[
-              const SizedBox(height: AppSpace.s),
-              Text(
-                message!,
-                style: text.bodyMedium?.copyWith(color: AppColors.inkMuted),
-                textAlign: TextAlign.center,
-              ),
-            ],
-            if (actionLabel != null) ...[
-              const SizedBox(height: AppSpace.xl),
-              PrimaryButton(label: actionLabel!, onPressed: onAction, expand: false),
-            ],
-          ],
+          ),
         ),
       ),
     );
