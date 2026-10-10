@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../core/theme/app_colors.dart';
-import '../core/theme/app_spacing.dart';
 import '../features/organizer/event_detail_view.dart';
 import '../features/organizer/event_form_view.dart';
 import '../features/organizer/events_view.dart';
@@ -21,6 +19,7 @@ import '../models/event.dart';
 import '../models/roadmap.dart';
 import '../models/vendor.dart';
 import '../shared/widgets/confirm_dialog.dart';
+import 'dev_bar.dart';
 import 'dev_scenario.dart';
 import 'mock_data.dart';
 
@@ -48,7 +47,11 @@ class DevOrganizerShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const _DevBar(),
+        DevBar<DevScenario>(
+          notifier: devScenario,
+          options: DevScenario.values,
+          labelOf: (s) => s.label,
+        ),
         Expanded(
           child: OrganizerShell(
             body: shell,
@@ -57,58 +60,6 @@ class DevOrganizerShell extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Thin strip that says this is a preview and switches the data scenario.
-class _DevBar extends StatelessWidget {
-  const _DevBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.ink,
-      child: SafeArea(
-        bottom: false,
-        child: SizedBox(
-          height: 40,
-          child: Row(
-            children: [
-              IconButton(
-                tooltip: 'Back to previews',
-                icon: const Icon(Icons.close, color: AppColors.surface, size: 20),
-                onPressed: () => context.go('/dev'),
-              ),
-              Text('PREVIEW', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppColors.goldContainer)),
-              const Spacer(),
-              ValueListenableBuilder(
-                valueListenable: devScenario,
-                builder: (context, current, _) => PopupMenuButton<DevScenario>(
-                  tooltip: 'Data scenario',
-                  initialValue: current,
-                  onSelected: (s) => devScenario.value = s,
-                  itemBuilder: (_) => [
-                    for (final s in DevScenario.values) PopupMenuItem(value: s, child: Text(s.label)),
-                  ],
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSpace.m),
-                    child: Row(
-                      children: [
-                        Text(
-                          'Scenario: ${current.label}',
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(color: AppColors.surface),
-                        ),
-                        const Icon(Icons.arrow_drop_down, color: AppColors.surface),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

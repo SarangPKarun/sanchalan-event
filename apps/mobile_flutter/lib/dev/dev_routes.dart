@@ -6,6 +6,7 @@ import '../features/auth/phone_screen.dart';
 import '../features/auth/welcome_screen.dart';
 import 'dev_menu.dart';
 import 'dev_organizer.dart';
+import 'dev_vendor.dart';
 import 'gallery_screen.dart';
 
 const _previewPhone = '+91 98765 43210';
@@ -17,6 +18,7 @@ void _toast(BuildContext context, String message) =>
 /// in debug builds.
 List<RouteBase> devRoutes() => [
       ...devOrganizerRoutes(),
+      ...devVendorRoutes(),
       GoRoute(path: '/dev', builder: (context, state) => const DevMenuScreen()),
       GoRoute(path: '/dev/gallery', builder: (context, state) => const GalleryScreen()),
       GoRoute(

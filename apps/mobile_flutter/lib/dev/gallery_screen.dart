@@ -8,6 +8,10 @@ import '../features/organizer/widgets/event_card.dart';
 import '../features/organizer/widgets/hero_card.dart';
 import '../features/organizer/widgets/task_tile.dart';
 import '../features/organizer/widgets/vendor_card.dart';
+import '../features/vendor/widgets/completeness_card.dart';
+import '../features/vendor/widgets/notice_banner.dart';
+import '../features/vendor/widgets/profile_preview_card.dart';
+import '../features/vendor/widgets/status_timeline.dart';
 import '../models/enums.dart';
 import 'mock_data.dart';
 import '../shared/widgets/app_card.dart';
@@ -183,6 +187,28 @@ class GalleryScreen extends StatelessWidget {
           const SizedBox(height: AppSpace.xl),
           const SectionHeader('Organizer: vendor card'),
           VendorCard(vendor: mock.vendors.first, onTap: () {}),
+          const SizedBox(height: AppSpace.xl),
+          const SectionHeader('Vendor: profile completeness'),
+          CompletenessCard(completeness: mock.vendorDraft.completeness, onTapItem: (_) {}),
+          const SizedBox(height: AppSpace.xl),
+          const SectionHeader('Vendor: notices'),
+          const NoticeBanner(tone: NoticeTone.success, title: "You're live", message: 'Families can find you.'),
+          const SizedBox(height: AppSpace.s),
+          const NoticeBanner(tone: NoticeTone.warning, title: 'Under review', message: 'We will tell you when it is approved.'),
+          const SizedBox(height: AppSpace.s),
+          const NoticeBanner(tone: NoticeTone.error, title: 'Changes requested', message: 'Please add a clearer description.'),
+          const SizedBox(height: AppSpace.s),
+          const NoticeBanner(tone: NoticeTone.info, title: 'Good to know', message: 'Changes may send you back for review.'),
+          const SizedBox(height: AppSpace.xl),
+          const SectionHeader('Vendor: timeline'),
+          const StatusTimeline(steps: [
+            TimelineStep('Submitted', '8 Oct 2026', TimelineState.done),
+            TimelineStep('In review', 'Our team is checking your details', TimelineState.current),
+            TimelineStep('Live', 'Families can find and contact you', TimelineState.upcoming),
+          ]),
+          const SizedBox(height: AppSpace.xl),
+          const SectionHeader('Vendor: public preview'),
+          ProfilePreviewCard(vendor: mock.vendorPublished.vendor),
           const SizedBox(height: AppSpace.xl),
           const SectionHeader('Empty and error'),
           AppCard(

@@ -210,19 +210,27 @@ Write a one-page flow map (in `docs/ux-flow.md`) before any widget code. **Done:
 - Main actions are pinned to the bottom of screens and sheets (`BottomActionBar`, sheet footer) so they never fall below the fold on a small phone.
 - Phase 7 notes: the dev shell already uses `StatefulShellRoute`; in the real router `/events` and `/vendors` become tabs of that shell, `/home` is added, and `redirectFor` and its tests are updated then. Call, WhatsApp and links need the `url_launcher` package, added in Phase 7.
 - `/dev` previews: Organizer app (with a Normal / No events / Loading / Error scenario switcher), Event detail (tasks and budget editable), Event without a roadmap (generate flow), New and Edit event, Profile setup, Vendor detail.### 6E. Vendor home (status-aware dashboard)
-- [ ] **draft:** "Complete your profile" checklist with a % complete bar and a CTA to the next missing item.
-- [ ] **pending_review:** friendly under-review screen with a timeline (submitted → being reviewed → live) and an "edit while you wait" option if the backend allows it.
-- [ ] **published:** profile preview card as organizers see it, plus the past-work list.
-- [ ] **rejected:** show the admin's reason prominently with a "Fix and resubmit" CTA.
-- [ ] **suspended:** explanation and a support contact action.
+- [x] **draft:** "Complete your profile" checklist with a % complete bar and a CTA to the next missing item.
+- [x] **pending_review:** friendly under-review screen with a timeline (submitted → being reviewed → live) and an "edit while you wait" option if the backend allows it.
+- [x] **published:** profile preview card as organizers see it, plus the past-work list.
+- [x] **rejected:** show the admin's reason prominently with a "Fix and resubmit" CTA.
+- [x] **suspended:** explanation and a support contact action.
 
+**Done (milestone 2, part B), plain widgets with callbacks, shown as mock-data previews:**
+- `features/vendor/vendor_dashboard_view.dart`: one dashboard that changes with the status (draft and rejected: completeness card with ring and checklist, rejected adds the admin's reason; under review: timeline and "Withdraw to edit"; live: "You're live" banner and a preview of the public profile; suspended: explanation and "Contact support"), plus loading and error. Widgets in `features/vendor/widgets/`.
+- `features/vendor/vendor_profile_editor_view.dart` and `sheets/past_work_sheet.dart`: sections, live counters, inline validation, at most 5 categories and 10 past-work entries, a pinned action bar (Submit and Save draft, or Save changes for a live profile), and a confirmation before a live profile is sent back to review.
+- `features/vendor/vendor_profile_logic.dart` (pure, unit-tested): completeness, only-changed-fields diff, review triggers and validators with the server's limits. `UpdateVendorProfileBody` can now send an explicit null to clear an optional field (the old app could; the first Dart version could not).
+- `/dev/v/home` (scenario switcher: Draft, Rejected, Under review, Live, Suspended, Loading, Error; withdraw and submit move between statuses) and `/dev/v/editor`.
+- 457 tests pass.
 ### 6F. Cross-cutting UX
-- [ ] Skeleton loaders instead of blank screens or bare spinners.
-- [ ] Pull-to-refresh on lists.
-- [ ] Inline form validation and clear, human error copy.
-- [ ] Error and retry states; an offline banner (network errors never log the user out).
-- [ ] Accessibility: 48dp minimum touch targets, WCAG AA contrast, works at large text scale.
-- [ ] Strings in ARB files with `flutter_localizations` (English only now, ready for Hindi and other languages per the roadmap).
+- [x] Skeleton loaders instead of blank screens or bare spinners.
+- [x] Pull-to-refresh on lists.
+- [x] Inline form validation and clear, human error copy.
+- [x] Error and retry states (network errors never log the user out). The offline banner is deferred to Phase 7.
+- [x] Accessibility: 48dp minimum touch targets, WCAG AA contrast, works at large text scale.
+- [ ] Strings in ARB files with `flutter_localizations` (English only now, ready for Hindi and other languages per the roadmap). Deferred to Phase 7.
+
+**Status:** skeletons, pull-to-refresh, inline validation, error and retry states and accessibility (48 dp targets, labels, large text and small-screen tests) are done. **Deferred to Phase 7** because they need real plumbing: the offline banner (needs a connectivity package) and moving strings into ARB files (English only for now; a mechanical change best done once all screens exist). Haptics only on OTP entry.
 
 ### 6G. Process and sign-off
 1. Ask for brand inputs first: logo, brand colors, any Figma. If none, propose a palette and wireframes.

@@ -25,6 +25,9 @@ const devEntries = [
   DevEntry('/dev/o/edit-event/ev-wedding', 'Edit event form', 'Change the budget to see the rescale choice'),
   DevEntry('/dev/o/profile-setup', 'Profile setup', 'Name and who is organizing'),
   DevEntry('/dev/o/vendor/v1', 'Vendor detail', 'Facts, past work, links, Call and WhatsApp'),
+  // Vendor
+  DevEntry('/dev/v/home', 'Vendor app', 'Dashboard for each status with a scenario switcher; withdraw and submit work'),
+  DevEntry('/dev/v/editor', 'Vendor profile editor', 'Sections, live counters, past work, review warning for a live profile'),
   // Design system
   DevEntry('/dev/gallery', 'Design gallery', 'Colors, type and every widget'),
 ];
