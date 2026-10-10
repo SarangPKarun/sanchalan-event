@@ -225,6 +225,8 @@ Write a one-page flow map (in `docs/ux-flow.md`) before any widget code. **Done:
 4. Build the design-system widgets and the gallery screen.
 5. Only then start Phase 7.
 
+**Sign-off so far:** the design system (warm festive look, fonts, widgets) and the welcome, phone and OTP screens were reviewed on a phone and approved. The organizer home, event detail, events list and vendor dashboards (6D, 6E) still need their previews and sign-off before Phase 7.
+
 **Exit check:** signed-off wireframes for welcome, phone, OTP, organizer home, event detail, vendor dashboard, and the design-system gallery reviewed on a real device.
 
 Time-box this phase. Design only features that exist today; park anything else in a backlog.
