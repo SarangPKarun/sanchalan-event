@@ -137,11 +137,11 @@ void main() {
 
     // Every status lands on the dashboard, which adapts to the status.
     final cases = {
-      'draft': (AppPaths.vendorHome, 'Vendor home'),
-      'rejected': (AppPaths.vendorHome, 'Vendor home'),
-      'pending_review': (AppPaths.vendorHome, 'Vendor home'),
-      'published': (AppPaths.vendorHome, 'Vendor home'),
-      'suspended': (AppPaths.vendorHome, 'Vendor home'),
+      'draft': (AppPaths.vendorHome, 'Finish your profile'),
+      'rejected': (AppPaths.vendorHome, 'Changes requested'),
+      'pending_review': (AppPaths.vendorHome, 'Your profile is under review'),
+      'published': (AppPaths.vendorHome, "You're live"),
+      'suspended': (AppPaths.vendorHome, 'Your listing is paused'),
     };
     for (final entry in cases.entries) {
       testWidgets('${entry.key} -> ${entry.value.$1}', (tester) async {

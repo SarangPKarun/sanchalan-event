@@ -18,6 +18,17 @@ class VendorDataNotifier extends AsyncNotifier<VendorMeResponse> {
     if (ref.mounted) state = result;
   }
 
+  /// Reloads silently (no loading flip), keeping the current data if it fails.
+  /// For pull-to-refresh.
+  Future<void> reload() async {
+    try {
+      final fresh = await ref.read(vendorRepositoryProvider).getMe();
+      if (ref.mounted) state = AsyncData(fresh);
+    } catch (_) {
+      // Keep what is shown; the next refresh retries.
+    }
+  }
+
   /// Replaces the vendor with a fresh server response without a loading flip.
   /// Use after any edit, submit or withdraw call.
   void apply(VendorMeResponse vendor) => state = AsyncData(vendor);

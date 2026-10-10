@@ -17,10 +17,11 @@ import '../../features/organizer/pages/home_page.dart';
 import '../../features/organizer/pages/profile_pages.dart';
 import '../../features/organizer/pages/vendors_pages.dart';
 import '../../features/organizer/organizer_shell.dart';
+import '../../features/vendor/pages/vendor_pages.dart';
 import '../../features/vendor/vendor_providers.dart';
+import '../../models/vendor.dart' show VendorRequiredField;
 import '../../shared/widgets/data_error_screen.dart';
 import '../../shared/widgets/data_loading_screen.dart';
-import '../../shared/widgets/placeholder_screen.dart';
 import 'guard_state.dart';
 import 'paths.dart';
 import 'redirects.dart';
@@ -119,8 +120,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // Vendor
-      GoRoute(path: AppPaths.vendorHome, builder: (_, _) => const PlaceholderScreen('Vendor home')),
-      GoRoute(path: AppPaths.vendorProfile, builder: (_, _) => const PlaceholderScreen('Vendor profile')),
+      GoRoute(path: AppPaths.vendorHome, builder: (_, _) => const VendorDashboardPage()),
+      GoRoute(
+        path: AppPaths.vendorProfile,
+        builder: (_, state) => VendorEditorPage(
+          focusField: state.extra is VendorRequiredField ? state.extra! as VendorRequiredField : null,
+        ),
+      ),
       GoRoute(
         path: AppPaths.vendorLoading,
         builder: (context, state) => const DataLoadingScreen(),
