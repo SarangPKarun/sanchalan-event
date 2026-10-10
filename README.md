@@ -13,11 +13,11 @@ pnpm workspace monorepo:
 ```
 apps/
   backend/          Express + TypeScript API, Prisma schema/migrations
-  mobile/            Expo (React Native) app
+  mobile_flutter/    Flutter app (Android), see FLUTTER_MIGRATION.md
   admin/             Internal admin web app (Vite + React + TS) — vendor
                      review queue, email/password login for the team
 packages/
-  shared-types/      TypeScript interfaces shared by backend and mobile —
+  shared-types/      TypeScript interfaces shared by backend and admin —
                      one definition of what an EventGroup, Task, etc. look
                      like, instead of drifting copies in each app
 ```

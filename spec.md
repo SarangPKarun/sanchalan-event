@@ -29,7 +29,7 @@ pnpm monorepo (`pnpm-workspace.yaml`):
 | Path | Stack | Deploy |
 |---|---|---|
 | `apps/backend` | Express 5, TypeScript, Prisma 6, PostgreSQL, Zod 4, jsonwebtoken, bcryptjs, libphonenumber-js, run with tsx | Render |
-| `apps/mobile` | Expo 57, React Native 0.86, React 19, expo-router (typed routes), expo-secure-store, axios | Android APK via EAS (`com.sanchalan.app`) |
+| `apps/mobile_flutter` | Flutter 3, Riverpod, go_router, dio, flutter_secure_storage (replaced the Expo/React Native app, see `FLUTTER_MIGRATION.md`) | Android APK (`com.sanchalan.app`) |
 | `apps/admin` | Vite 8, React 19, react-router-dom 7, axios, plain CSS, oxlint | Vercel (SPA rewrite) |
 | `packages/shared-types` | Type-only TypeScript interfaces | — |
 
@@ -170,7 +170,7 @@ All routes require a bearer token except `/auth/*` and `/admin/auth/login`. Ther
 
 ## 7. Screens
 
-### Mobile (`apps/mobile/app`, expo-router with `Stack.Protected`)
+### Mobile (old Expo app, now `apps/mobile_flutter`; the routes below describe the original app, the Flutter routes are in `docs/ux-flow.md`)
 - `(auth)/phone`: role picker, country-code picker and an E.164-validated number.
 - `(auth)/otp`: 6-digit entry.
 - `(app)/(organizer)/`:
@@ -260,13 +260,11 @@ Phased, risk-ordered plan (v1.0):
 **Security (fix before real users)**
 - `apps/backend/src/lib/otp.ts` returns a fixed OTP of `123456`, a temporary testing change. Anyone can log in as any phone number. Restore the CSPRNG.
 - The uncommitted `README.md` change contains a plaintext admin password. Remove it and rotate the password.
-- The Render URL is hardcoded in `apps/mobile/eas.json`.
 
 **Engineering debt**
 - There are no automated tests or CI. The root `test` script is a placeholder.
 - There is no `/health` endpoint for Render.
 - Runtime constants are duplicated by hand between `apps/backend/src/lib/vendor-limits.ts` and shared-types. The shared-types package mirrors the schema by hand and can drift.
-- `apps/mobile/lib/types.ts` still uses local types (TODO: import from `@sanchalan/shared-types`).
 - The refresh-token expiry is hardcoded to 30 days and ignores `JWT_REFRESH_EXPIRES_IN`.
 - Budget split rounding can drift by a cent or two on non-round inputs.
 - The OpenAI adapter may not suit every model's `response_format` behaviour. Anthropic relies on prompt instructions for JSON-only output.

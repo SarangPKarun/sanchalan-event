@@ -324,9 +324,9 @@ flutter build appbundle --release --dart-define=API_URL=https://project-w-9foi.o
 ## 11. Cutover
 
 - [ ] Feature-parity checklist fully ticked; pilot users smoke-tested the Flutter APK.
-- [ ] `git mv apps/mobile apps/mobile_rn_archive` (or delete; it stays in the `rn-final` tag), then `git mv apps/mobile_flutter apps/mobile`.
+- [x] Old Expo app deleted (still in the `rn-final` tag; lockfile refreshed). Open: rename `apps/mobile_flutter` to `apps/mobile` (optional, needs path updates in docs and CI).
 - [ ] Update `pnpm-workspace.yaml`, root scripts, `README.md`, `spec.md`, `.env.example`, `DEPLOY_AND_APK.md`.
-- [ ] Remove `eas.json` and the Expo dependencies.
+- [x] Removed `eas.json` and the Expo dependencies with the app.
 - [ ] Update the roadmap (item 1.6) and project memory.
 - [ ] Merge `flutter-migration` into `main`.
 

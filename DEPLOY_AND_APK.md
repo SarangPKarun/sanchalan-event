@@ -1,5 +1,11 @@
 # Sanchalan: Deploy (Neon + Render) and Build the Android APK
 
+> **Part 3 is out of date.** The Expo/EAS app was removed (it stays in git under the `rn-final` tag).
+> The mobile app is now Flutter in `apps/mobile_flutter`. Build a release APK with
+> `flutter build apk --release --dart-define=API_URL=https://<your-render-url>` (there is no default
+> URL in release builds). Signing and CI are Phase 10 of `FLUTTER_MIGRATION.md`, and this part will be
+> rewritten then. Parts 1 and 2 (Neon, Render) are unchanged.
+
 ```
 APK (phone) --HTTPS--> Render (apps/backend, Express) --> Neon (Postgres)
 ```
