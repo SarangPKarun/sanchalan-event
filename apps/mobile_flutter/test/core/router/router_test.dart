@@ -56,7 +56,7 @@ void main() {
         secure: session('organizer'),
       );
       expect(location(c), AppPaths.profileSetup);
-      expect(find.text('Set up your profile'), findsWidgets);
+      expect(find.text('Tell us about you'), findsOneWidget);
     });
 
     testWidgets('profile complete -> /events', (tester) async {

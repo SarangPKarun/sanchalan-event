@@ -10,6 +10,12 @@ import '../../features/auth/phone_page.dart';
 import '../../features/auth/unsupported_role_screen.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/organizer/organizer_providers.dart';
+import '../../features/organizer/pages/event_detail_page.dart';
+import '../../features/organizer/pages/event_form_pages.dart';
+import '../../features/organizer/pages/events_page.dart';
+import '../../features/organizer/pages/home_page.dart';
+import '../../features/organizer/pages/profile_pages.dart';
+import '../../features/organizer/pages/vendors_pages.dart';
 import '../../features/organizer/organizer_shell.dart';
 import '../../features/vendor/vendor_providers.dart';
 import '../../shared/widgets/data_error_screen.dart';
@@ -77,22 +83,28 @@ final routerProvider = Provider<GoRouter>((ref) {
           onSelect: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
         ),
         branches: [
-          StatefulShellBranch(routes: [tab(AppPaths.home, (_) => const PlaceholderScreen('Home'))]),
-          StatefulShellBranch(routes: [tab(AppPaths.events, (_) => const PlaceholderScreen('My events'))]),
+          StatefulShellBranch(routes: [tab(AppPaths.home, (_) => const HomePage())]),
+          StatefulShellBranch(routes: [tab(AppPaths.events, (_) => const EventsPage())]),
           StatefulShellBranch(routes: [
-            tab(AppPaths.vendors, (s) => PlaceholderScreen('Vendors', detail: s.uri.queryParameters['category'])),
+            tab(AppPaths.vendors, (s) => VendorsPage(initialCategory: s.uri.queryParameters['category'])),
           ]),
-          StatefulShellBranch(routes: [tab(AppPaths.profile, (_) => const PlaceholderScreen('Profile'))]),
+          StatefulShellBranch(routes: [tab(AppPaths.profile, (_) => const OrganizerProfilePage())]),
         ],
       ),
 
       // Organizer: full-screen routes
-      full(AppPaths.profileSetup, (_) => const PlaceholderScreen('Set up your profile')),
-      full(AppPaths.profileEdit, (_) => const PlaceholderScreen('Edit profile')),
-      full(AppPaths.eventSetup, (_) => const PlaceholderScreen('New event')),
-      full(AppPaths.eventHomePattern, (s) => PlaceholderScreen('Event', detail: s.pathParameters['id'])),
-      full(AppPaths.eventEditPattern, (s) => PlaceholderScreen('Edit event', detail: s.pathParameters['id'])),
-      full(AppPaths.vendorDetailPattern, (s) => PlaceholderScreen('Vendor', detail: s.pathParameters['id'])),
+      full(AppPaths.profileSetup, (_) => const ProfileSetupPage()),
+      full(AppPaths.profileEdit, (_) => const ProfileEditPage()),
+      full(AppPaths.eventSetup, (_) => const EventCreatePage()),
+      full(
+        AppPaths.eventHomePattern,
+        (s) => EventDetailPage(
+          id: s.pathParameters['id']!,
+          args: s.extra is EventHomeArgs ? s.extra! as EventHomeArgs : null,
+        ),
+      ),
+      full(AppPaths.eventEditPattern, (s) => EventEditPage(id: s.pathParameters['id']!)),
+      full(AppPaths.vendorDetailPattern, (s) => VendorDetailPage(id: s.pathParameters['id']!)),
       GoRoute(
         path: AppPaths.organizerLoading,
         builder: (context, state) => const DataLoadingScreen(),

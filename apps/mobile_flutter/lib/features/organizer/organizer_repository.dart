@@ -63,9 +63,8 @@ class OrganizerRepository {
         await _send('PATCH', '/event-groups/$id', body: body.toJson()),
       );
 
-  Future<void> deleteEventGroup(String id) async {
-    await _send('DELETE', '/event-groups/$id');
-  }
+  Future<DeleteEventGroupResponse> deleteEventGroup(String id) async =>
+      DeleteEventGroupResponse.fromJson(await _send('DELETE', '/event-groups/$id'));
 
   // --- roadmap / tasks ---
 

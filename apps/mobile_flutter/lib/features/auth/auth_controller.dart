@@ -86,6 +86,8 @@ class AuthController extends Notifier<AuthState> {
     // The next login must not see the previous user's data.
     ref.invalidate(organizerDataProvider);
     ref.invalidate(vendorDataProvider);
+    ref.invalidate(selectedEventIdProvider);
+    ref.invalidate(vendorFiltersProvider);
   }
 }
 

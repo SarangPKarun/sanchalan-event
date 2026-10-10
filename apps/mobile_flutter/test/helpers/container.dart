@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sanchalan/core/api_client.dart';
@@ -14,10 +15,12 @@ import 'fake_adapter.dart';
 (ProviderContainer, FakeAdapter) makeContainer(
   Handler handler, {
   Map<String, String> secure = const {},
+  List<Override> overrides = const [],
 }) {
   FlutterSecureStorage.setMockInitialValues(Map.of(secure));
   final adapter = FakeAdapter(handler);
   final container = ProviderContainer(overrides: [
+    ...overrides,
     apiClientProvider.overrideWith(
       (ref) => ApiClient(
         storage: ref.watch(authStorageProvider),

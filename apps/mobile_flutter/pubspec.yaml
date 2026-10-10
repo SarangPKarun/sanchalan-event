@@ -46,6 +46,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   phone_numbers_parser: ^9.0.28
+  url_launcher: ^6.3.3
 dev_dependencies:
   flutter_test:
     sdk: flutter

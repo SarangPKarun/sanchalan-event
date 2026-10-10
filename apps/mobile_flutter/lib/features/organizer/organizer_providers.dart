@@ -49,6 +49,12 @@ class OrganizerDataNotifier extends AsyncNotifier<OrganizerData> {
     if (ref.mounted) state = result;
   }
 
+  /// Replaces the organizer (after the profile was edited) without a loading flip.
+  void setOrganizer(Organizer organizer) {
+    final current = state.value;
+    if (current is OrganizerReady) state = AsyncData(OrganizerReady(organizer, current.eventGroups));
+  }
+
   /// Reloads only the event list, silently (no loading flip). Use after
   /// creating, editing or deleting an event. Keeps the current list on failure.
   Future<void> reloadEvents() async {
@@ -93,3 +99,13 @@ final taskCategoriesProvider = FutureProvider.autoDispose<List<TaskCategory>>(
   (ref) => ref.watch(organizerRepositoryProvider).listTaskCategories(),
   retry: _noRetry,
 );
+
+/// The event the home screen features, chosen with the chips. Null means "the soonest one".
+class SelectedEventNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void select(String? id) => state = id;
+}
+
+final selectedEventIdProvider = NotifierProvider<SelectedEventNotifier, String?>(SelectedEventNotifier.new);

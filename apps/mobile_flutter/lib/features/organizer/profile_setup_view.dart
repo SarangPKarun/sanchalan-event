@@ -19,17 +19,28 @@ const _typeInfo = {
 
 /// One-time profile step after the first login: name and who is organizing.
 class ProfileSetupView extends StatefulWidget {
-  const ProfileSetupView({super.key, required this.onSubmit});
+  const ProfileSetupView({
+    super.key,
+    required this.onSubmit,
+    this.initial,
+    this.onBack,
+  });
 
   final Future<String?> Function(UpdateOrganizerProfileBody body) onSubmit;
+
+  /// Set when editing an existing profile instead of the first-time setup.
+  final Organizer? initial;
+  final VoidCallback? onBack;
 
   @override
   State<ProfileSetupView> createState() => _ProfileSetupViewState();
 }
 
 class _ProfileSetupViewState extends State<ProfileSetupView> {
-  final _name = TextEditingController();
-  OrganizerType? _type;
+  late final _name = TextEditingController(
+    text: widget.initial?.displayName ?? '',
+  );
+  late OrganizerType? _type = widget.initial?.organizerType;
   bool _showErrors = false;
   bool _submitting = false;
   String? _error;
@@ -48,7 +59,10 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
     if (_name.text.trim().isEmpty || _type == null) return;
     setState(() => _submitting = true);
     final error = await widget.onSubmit(
-      UpdateOrganizerProfileBody(displayName: _name.text.trim(), organizerType: _type!),
+      UpdateOrganizerProfileBody(
+        displayName: _name.text.trim(),
+        organizerType: _type!,
+      ),
     );
     if (!mounted) return;
     setState(() {
@@ -60,28 +74,57 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
+    final editing = widget.initial != null;
     return Scaffold(
+      appBar: editing
+          ? AppBar(
+              title: const Text('Edit profile'),
+              leading: IconButton(
+                tooltip: 'Back',
+                icon: const Icon(Icons.arrow_back),
+                onPressed:
+                    widget.onBack ?? () => Navigator.of(context).maybePop(),
+              ),
+            )
+          : null,
       body: SafeArea(
         child: Column(
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(AppSpace.xl, AppSpace.xxl, AppSpace.xl, AppSpace.xl),
+                padding: EdgeInsets.fromLTRB(
+                  AppSpace.xl,
+                  editing ? AppSpace.s : AppSpace.xxl,
+                  AppSpace.xl,
+                  AppSpace.xl,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Semantics(
-                      header: true,
-                      child: Text('Tell us about you', style: text.headlineLarge?.copyWith(color: AppColors.maroon)),
-                    ),
-                    const SizedBox(height: AppSpace.s),
-                    Text('Just two quick things so we can personalise your plan.', style: text.bodyLarge),
-                    const SizedBox(height: AppSpace.xl),
+                    if (!editing) ...[
+                      Semantics(
+                        header: true,
+                        child: Text(
+                          'Tell us about you',
+                          style: text.headlineLarge?.copyWith(
+                            color: AppColors.maroon,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppSpace.s),
+                      Text(
+                        'Just two quick things so we can personalise your plan.',
+                        style: text.bodyLarge,
+                      ),
+                      const SizedBox(height: AppSpace.xl),
+                    ],
                     AppTextField(
                       label: 'Your name',
                       controller: _name,
                       hint: 'e.g. Priya Sharma',
-                      errorText: _showErrors && _name.text.trim().isEmpty ? 'Please enter your name.' : null,
+                      errorText: _showErrors && _name.text.trim().isEmpty
+                          ? 'Please enter your name.'
+                          : null,
                       textInputAction: TextInputAction.done,
                       onChanged: (_) => setState(() {}),
                     ),
@@ -95,30 +138,49 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
                           button: true,
                           selected: _type == t,
                           inMutuallyExclusiveGroup: true,
-                          label: '${organizerTypeLabel(t)}. ${_typeInfo[t]!.$2}',
+                          label:
+                              '${organizerTypeLabel(t)}. ${_typeInfo[t]!.$2}',
                           excludeSemantics: true,
                           onTap: () => setState(() => _type = t),
                           child: AppCard(
                             raised: false,
                             onTap: () => setState(() => _type = t),
-                            color: _type == t ? AppColors.primaryContainer : AppColors.surface,
-                            borderColor: _type == t ? AppColors.primary : AppColors.outline,
+                            color: _type == t
+                                ? AppColors.primaryContainer
+                                : AppColors.surface,
+                            borderColor: _type == t
+                                ? AppColors.primary
+                                : AppColors.outline,
                             child: Row(
                               children: [
-                                Icon(_typeInfo[t]!.$1, color: AppColors.primary),
+                                Icon(
+                                  _typeInfo[t]!.$1,
+                                  color: AppColors.primary,
+                                ),
                                 const SizedBox(width: AppSpace.l),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text(organizerTypeLabel(t), style: text.titleMedium),
-                                      Text(_typeInfo[t]!.$2, style: text.bodySmall),
+                                      Text(
+                                        organizerTypeLabel(t),
+                                        style: text.titleMedium,
+                                      ),
+                                      Text(
+                                        _typeInfo[t]!.$2,
+                                        style: text.bodySmall,
+                                      ),
                                     ],
                                   ),
                                 ),
                                 Icon(
-                                  _type == t ? Icons.radio_button_checked : Icons.radio_button_unchecked,
-                                  color: _type == t ? AppColors.primary : AppColors.outlineStrong,
+                                  _type == t
+                                      ? Icons.radio_button_checked
+                                      : Icons.radio_button_unchecked,
+                                  color: _type == t
+                                      ? AppColors.primary
+                                      : AppColors.outlineStrong,
                                 ),
                               ],
                             ),
@@ -126,17 +188,33 @@ class _ProfileSetupViewState extends State<ProfileSetupView> {
                         ),
                       ),
                     if (_showErrors && _type == null)
-                      Text('Choose one to continue.', style: text.bodySmall?.copyWith(color: AppColors.errorText)),
+                      Text(
+                        'Choose one to continue.',
+                        style: text.bodySmall?.copyWith(
+                          color: AppColors.errorText,
+                        ),
+                      ),
                     if (_error != null) ...[
                       const SizedBox(height: AppSpace.m),
-                      Text(_error!, style: text.bodyMedium?.copyWith(color: AppColors.errorText)),
+                      Text(
+                        _error!,
+                        style: text.bodyMedium?.copyWith(
+                          color: AppColors.errorText,
+                        ),
+                      ),
                     ],
                   ],
                 ),
               ),
             ),
             BottomActionBar(
-              children: [PrimaryButton(label: 'Continue', loading: _submitting, onPressed: _submit)],
+              children: [
+                PrimaryButton(
+                  label: editing ? 'Save' : 'Continue',
+                  loading: _submitting,
+                  onPressed: _submit,
+                ),
+              ],
             ),
           ],
         ),

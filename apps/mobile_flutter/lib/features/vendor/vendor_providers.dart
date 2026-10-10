@@ -43,3 +43,13 @@ final vendorCategoriesProvider = FutureProvider.autoDispose<List<VendorCategory>
   (ref) => ref.watch(vendorRepositoryProvider).listCategories(),
   retry: _noRetry,
 );
+
+/// The directory filters the organizer has chosen (kept while they move between tabs).
+class VendorFiltersNotifier extends Notifier<VendorFilters> {
+  @override
+  VendorFilters build() => const VendorFilters();
+
+  void set(VendorFilters filters) => state = filters;
+}
+
+final vendorFiltersProvider = NotifierProvider<VendorFiltersNotifier, VendorFilters>(VendorFiltersNotifier.new);
