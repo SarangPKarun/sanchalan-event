@@ -206,6 +206,7 @@ class UpdateVendorProfileBody {
     this.instagramUrl,
     this.websiteUrl,
     this.whatsappNumber,
+    this.clear = const {},
   });
   factory UpdateVendorProfileBody.fromJson(Map<String, dynamic> json) =>
       _$UpdateVendorProfileBodyFromJson(json);
@@ -216,11 +217,24 @@ class UpdateVendorProfileBody {
   final String? serviceArea;
   final String? description;
   final int? yearsOfExperience;
-  final double? startingPrice;
+  final int? startingPrice;
   final String? instagramUrl;
   final String? websiteUrl;
   final String? whatsappNumber;
-  Map<String, dynamic> toJson() => _$UpdateVendorProfileBodyToJson(this);
+
+  /// Optional fields to clear: sent as an explicit `null` (a plain null field
+  /// is left out of the request, which would mean "unchanged").
+  /// Only email, yearsOfExperience, startingPrice, instagramUrl, websiteUrl and
+  /// whatsappNumber can be cleared.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  final Set<String> clear;
+
+  bool get isEmpty => toJson().isEmpty;
+
+  Map<String, dynamic> toJson() => {
+        ..._$UpdateVendorProfileBodyToJson(this),
+        for (final f in clear) f: null,
+      };
 }
 
 @JsonSerializable()

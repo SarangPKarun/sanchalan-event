@@ -1,4 +1,6 @@
 import '../core/format.dart';
+import '../features/vendor/vendor_profile_logic.dart';
+import '../models/enums.dart';
 import '../models/event.dart';
 import '../models/organizer.dart';
 import '../models/roadmap.dart';
@@ -335,4 +337,44 @@ class MockData {
       description: 'Garden lawn and indoor banquet for up to 800 guests, with in-house catering.',
     )),
   ];
+
+  // --- the signed-in vendor's own profile, in each status ---
+
+  /// The vendor's own view (`GET /vendor/me`) in [status].
+  /// [partial] gives a half-filled draft: only a name and a contact person.
+  VendorMeResponse vendorMe(VendorStatus status, {bool partial = false, String? rejectionReason}) {
+    final json = vendors.first.toJson()
+      ..['status'] = enumWireValue(status)
+      ..['id'] = 'me'
+      ..['reviewedAt'] = status == VendorStatus.published || status == VendorStatus.suspended
+          ? today.toIso8601String()
+          : null
+      ..['submittedAt'] = partial || status == VendorStatus.draft
+          ? null
+          : today.subtract(const Duration(days: 2)).toIso8601String()
+      ..['rejectionReason'] = status == VendorStatus.rejected
+          ? (rejectionReason ?? 'Please add a clearer description of your services and a working website link.')
+          : null;
+    if (partial) {
+      json
+        ..['priceTier'] = null
+        ..['serviceArea'] = null
+        ..['description'] = null
+        ..['yearsOfExperience'] = null
+        ..['startingPrice'] = null
+        ..['instagramUrl'] = null
+        ..['websiteUrl'] = null
+        ..['whatsappNumber'] = null
+        ..['vendorVendorCategories'] = <Object>[]
+        ..['portfolioItems'] = <Object>[];
+    }
+    final vendor = Vendor.fromJson(json);
+    return VendorMeResponse(vendor: vendor, completeness: computeCompleteness(vendor));
+  }
+
+  late final VendorMeResponse vendorDraft = vendorMe(VendorStatus.draft, partial: true);
+  late final VendorMeResponse vendorRejected = vendorMe(VendorStatus.rejected);
+  late final VendorMeResponse vendorPending = vendorMe(VendorStatus.pendingReview);
+  late final VendorMeResponse vendorPublished = vendorMe(VendorStatus.published);
+  late final VendorMeResponse vendorSuspended = vendorMe(VendorStatus.suspended);
 }

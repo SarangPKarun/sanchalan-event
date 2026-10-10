@@ -218,7 +218,7 @@ UpdateVendorProfileBody _$UpdateVendorProfileBodyFromJson(
   serviceArea: json['serviceArea'] as String?,
   description: json['description'] as String?,
   yearsOfExperience: (json['yearsOfExperience'] as num?)?.toInt(),
-  startingPrice: (json['startingPrice'] as num?)?.toDouble(),
+  startingPrice: (json['startingPrice'] as num?)?.toInt(),
   instagramUrl: json['instagramUrl'] as String?,
   websiteUrl: json['websiteUrl'] as String?,
   whatsappNumber: json['whatsappNumber'] as String?,
