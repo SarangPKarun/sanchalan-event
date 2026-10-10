@@ -8,9 +8,12 @@ import '../../shared/widgets/primary_button.dart';
 
 /// First screen for a signed-out user.
 class WelcomeScreen extends StatelessWidget {
-  const WelcomeScreen({super.key, required this.onGetStarted});
+  const WelcomeScreen({super.key, required this.onGetStarted, this.onDebugPreviews});
 
   final VoidCallback onGetStarted;
+
+  /// Debug builds only: opens the design previews.
+  final VoidCallback? onDebugPreviews;
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +37,14 @@ class WelcomeScreen extends StatelessWidget {
             right: -90,
             child: _Blob(size: 220, color: AppColors.maroonContainer),
           ),
+          if (onDebugPreviews != null)
+            Positioned(
+              top: 0,
+              right: 0,
+              child: SafeArea(
+                child: TextButton(onPressed: onDebugPreviews, child: const Text('Previews')),
+              ),
+            ),
           SafeArea(
             child: Column(
               children: [

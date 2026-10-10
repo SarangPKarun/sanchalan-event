@@ -4,27 +4,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../dev/dev_routes.dart';
+import '../../features/auth/otp_args.dart';
+import '../../features/auth/otp_page.dart';
+import '../../features/auth/phone_page.dart';
 import '../../features/auth/unsupported_role_screen.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/organizer/organizer_providers.dart';
 import '../../features/organizer/organizer_shell.dart';
 import '../../features/vendor/vendor_providers.dart';
-import '../../models/enums.dart';
 import '../../shared/widgets/data_error_screen.dart';
 import '../../shared/widgets/data_loading_screen.dart';
 import '../../shared/widgets/placeholder_screen.dart';
-import '../../shared/widgets/primary_button.dart';
 import 'guard_state.dart';
 import 'paths.dart';
 import 'redirects.dart';
 
-/// Passed as `extra` when going from the phone screen to the OTP screen.
-class OtpArgs {
-  const OtpArgs({required this.phoneNumber, required this.role});
-
-  final String phoneNumber;
-  final AuthRole role;
-}
+export '../../features/auth/otp_args.dart';
 
 /// Re-runs the redirect rules whenever the guard state changes.
 final routerProvider = Provider<GoRouter>((ref) {
@@ -61,28 +56,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Auth
       GoRoute(
         path: AppPaths.welcome,
-        builder: (context, state) => WelcomeScreen(onGetStarted: () => context.go(AppPaths.phone)),
-      ),
-      GoRoute(
-        path: AppPaths.phone,
-        builder: (context, state) => PlaceholderScreen(
-          'Sign in',
-          actions: [
-            if (kDebugMode)
-              SecondaryButton(
-                label: 'Design previews',
-                expand: false,
-                onPressed: () => context.push(AppPaths.dev),
-              ),
-          ],
+        builder: (context, state) => WelcomeScreen(
+          onGetStarted: () => context.go(AppPaths.phone),
+          onDebugPreviews: kDebugMode ? () => context.push(AppPaths.dev) : null,
         ),
       ),
+      GoRoute(path: AppPaths.phone, builder: (context, state) => const PhonePage()),
       GoRoute(
         path: AppPaths.otp,
-        builder: (context, state) {
-          final args = state.extra! as OtpArgs;
-          return PlaceholderScreen('Verify OTP', detail: args.phoneNumber);
-        },
+        builder: (context, state) => OtpPage(args: state.extra! as OtpArgs),
         // The OTP screen needs to know who it is verifying.
         redirect: (context, state) => state.extra is OtpArgs ? null : AppPaths.phone,
       ),
