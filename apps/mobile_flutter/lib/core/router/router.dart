@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../dev/dev_menu.dart';
-import '../../dev/gallery_screen.dart';
+import '../../dev/dev_routes.dart';
 import '../../features/auth/unsupported_role_screen.dart';
 import '../../features/organizer/organizer_providers.dart';
 import '../../features/vendor/vendor_providers.dart';
@@ -47,10 +46,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       _route(AppPaths.unsupportedRole, (_) => const UnsupportedRoleScreen()),
 
       // Design previews: debug builds only
-      if (kDebugMode) ...[
-        _route(AppPaths.dev, (_) => const DevMenuScreen()),
-        _route('${AppPaths.dev}/gallery', (_) => const GalleryScreen()),
-      ],
+      if (kDebugMode) ...devRoutes(),
 
       // Auth
       GoRoute(

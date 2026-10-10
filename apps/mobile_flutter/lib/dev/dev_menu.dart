@@ -14,7 +14,7 @@ class DevEntry {
 
 const devEntries = [
   DevEntry('/dev/gallery', 'Design gallery', 'Colors, type and every widget'),
-  DevEntry('/dev/welcome', 'Welcome', 'First screen for a signed-out user'),
+  DevEntry('/dev/welcome', 'Welcome to sign-in flow', 'Welcome, then phone, then OTP (mock)'),
   DevEntry('/dev/phone', 'Phone number', 'Role choice and number entry (mock)'),
   DevEntry('/dev/otp', 'OTP', 'Six-digit code, any code except 123456 fails (mock)'),
 ];

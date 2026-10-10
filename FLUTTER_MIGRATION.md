@@ -181,12 +181,16 @@ Write a one-page flow map (in `docs/ux-flow.md`) before any widget code. **Done:
 **Done (milestone 1).** Look: *warm festive*. Tokens are in `lib/core/theme/` (`app_colors.dart`, `app_typography.dart`, `app_spacing.dart`, `app_theme.dart`): deep saffron primary `#B64D08`, maroon `#7A1F2B`, gold `#D9A21B`, cream background `#FFF8EF`. Fonts: Playfair Display for headings and Nunito Sans for body, both bundled as variable fonts in `assets/fonts` (SIL OFL licenses alongside), so text never needs the network. Every text/background pair is checked for WCAG AA in `test/core/theme/contrast_test.dart` (which caught two failing pairs, now fixed). Widgets are in `lib/shared/widgets/`; the debug-only `/dev/gallery` shows all of them. The brand mark is a placeholder diya drawn in code until there is a real logo. Empty-state illustrations use icons for now instead of an SVG set. Pixel goldens are skipped because the test environment has no real fonts.
 
 ### 6C. Login revamp
-- [ ] **Welcome screen:** logo, one-line promise ("Plan every celebration, stress-free"), "Get started" button. Replaces the plain splash.
-- [ ] **Phone screen:** one job per screen. Two large role cards ("I'm planning an event" / "I'm a vendor"), country code and number in one row, a single large CTA, inline validation (E.164) with plain-language errors.
-- [ ] **OTP screen:** six boxed digits (`pinput`), auto-advance and auto-submit, SMS autofill, resend countdown, clear messages for wrong code, expired code and too many attempts (5 attempts, 3 requests per 10 minutes).
-- [ ] Keyboard-safe layout; works on a 360dp-wide screen.
+- [x] **Welcome screen:** logo, one-line promise ("Plan every celebration, stress-free"), "Get started" button. Replaces the plain splash.
+- [x] **Phone screen:** one job per screen. Two large role cards ("I'm planning an event" / "I'm a vendor"), country code and number in one row, a single large CTA, inline validation (E.164) with plain-language errors.
+- [x] **OTP screen:** six boxed digits (`pinput`), auto-advance and auto-submit, SMS autofill, resend countdown, clear messages for wrong code, expired code and too many attempts (5 attempts, 3 requests per 10 minutes).
+- [x] Keyboard-safe layout; works on a 360dp-wide screen.
 
-### 6D. Organizer home (the screen after login)
+**Done (milestone 1), as real widgets with callbacks and no network:** `features/auth/welcome_screen.dart`, `phone_screen.dart` (role cards, country picker, E.164 check with `phone_numbers_parser`, same per-country mobile rule as the RN app), `otp_screen.dart` (six boxes via `shared/widgets/otp_boxes.dart`, countdown, resend, error states). Phase 7 only connects them to `AuthRepository` and `authControllerProvider`.
+- The primary action sits in a `BottomActionBar` pinned above the keyboard. The first version put "Get started" and "Send code" below the fold on a 360x640 phone; the small-screen tests caught it.
+- `pinput` was tried and dropped: version 7 is built on the new separate `material_ui` package, whose `Material` and localizations are not the ones `package:flutter/material.dart` provides in Flutter 3.44, so it throws unless the whole app moves to `material_ui`. The code boxes are a small custom widget instead (a transparent text field over six boxes, so keyboard, paste and the one-time-code suggestion still work). SMS Retriever autofill is left for later because it needs a per-app hash in the SMS text.
+- Debug-only previews: run with `--dart-define=START_ROUTE=/dev` (or open the "Design previews" button on the sign-in placeholder) for `/dev/gallery`, `/dev/welcome`, `/dev/phone` and `/dev/otp` (code `123456` succeeds; a number ending 0000 fails to send).
+- 213 tests pass.### 6D. Organizer home (the screen after login)
 - [ ] **Bottom navigation:** Home · Events · Vendors · Profile (`StatefulShellRoute` in go_router).
 - [ ] **Home tab:**
   - greeting with the organizer's name;
