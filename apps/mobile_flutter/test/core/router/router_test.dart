@@ -113,6 +113,27 @@ void main() {
       expect(location(c), AppPaths.welcome);
     });
 
+    testWidgets('a screen opened with push is closed when the session ends', (tester) async {
+      final c = await pumpApp(
+        tester,
+        routes({
+          'POST /auth/refresh': refreshOk,
+          'POST /auth/logout': (_) => jsonBody({}),
+          'GET /organizers/me': (_) => fixtureBody('organizer_profile'),
+          'GET /event-groups/me': (_) => fixtureBody('event_groups_me'),
+        }),
+        secure: session('organizer'),
+      );
+      expect(location(c), AppPaths.home);
+      c.read(routerProvider).push(AppPaths.eventSetup);
+      await tester.pumpAndSettle();
+      expect(location(c), AppPaths.eventSetup);
+
+      unawaited(c.read(authControllerProvider.notifier).signOut());
+      await tester.pumpAndSettle();
+      expect(location(c), AppPaths.welcome);
+    });
+
     testWidgets('an organizer cannot open vendor screens', (tester) async {
       final c = await pumpApp(
         tester,

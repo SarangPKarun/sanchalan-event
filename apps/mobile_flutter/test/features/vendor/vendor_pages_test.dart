@@ -443,4 +443,52 @@ void main() {
       expect(find.text('Finish your profile'), findsOneWidget);
     });
   });
+
+  group('the whole draft journey, in the order the device sends it', () {
+    testWidgets('fill everything, add past work, submit: the vendor ends on the dashboard', (tester) async {
+      final blank = me('vendor_me_draft');
+      final full = me('vendor_me_published', status: 'draft'); // all fields, a category, past work
+      final workItems = full['portfolioItems'];
+      final blankWithWork = {...blank, 'portfolioItems': workItems, 'completeness': {'complete': false, 'missing': ['priceTier', 'serviceArea', 'description', 'categories']}};
+      final noCategories = {...full, 'vendorVendorCategories': <Object>[], 'completeness': {'complete': false, 'missing': ['categories']}};
+
+      final h = await pumpVendor(
+        tester,
+        () => blank,
+        overrides: {
+          'POST /vendor/me/past-work': (_) => jsonBody(updateResponse(blankWithWork), 201),
+          'PATCH /vendor/me': (_) => jsonBody(updateResponse(noCategories)),
+          'PUT /vendor/me/categories': (_) => jsonBody(updateResponse(full)),
+          'POST /vendor/me/submit': (_) => fixtureBody('vendor_submit'),
+        },
+      );
+      expect(find.text('Finish your profile'), findsOneWidget);
+      await tap(tester, find.text('Continue setting up'));
+      expect(h.location, AppPaths.vendorProfile);
+
+      await tester.enterText(input('Business name'), 'Live Test Photos');
+      await tester.enterText(input('Contact person'), 'Asha Tester');
+      await tester.enterText(input('Service area'), 'Pune');
+      await tester.enterText(input('Description'), 'Candid wedding photography across Pune and Mumbai, built by the live test.');
+      await tester.pump();
+      await tap(tester, find.widgetWithText(FilterChip, 'Photography'));
+      await tap(tester, find.widgetWithText(ChoiceChip, 'Premium'));
+
+      await tap(tester, find.text('Add past work'));
+      await tester.enterText(find.descendant(of: find.byType(BottomSheet), matching: find.byType(TextField)).first, 'Sharma wedding');
+      await tester.pump();
+      await tap(tester, find.descendant(of: find.byType(BottomSheet), matching: find.text('Add')));
+
+      await tap(tester, find.text('Submit for review'));
+      final order = [for (final r in h.adapter.requests) '${r.method} ${r.path}'];
+      expect(order.where((r) => !r.startsWith('GET') && !r.contains('/auth/')), [
+        'POST /vendor/me/past-work',
+        'PATCH /vendor/me',
+        'PUT /vendor/me/categories',
+        'POST /vendor/me/submit',
+      ]);
+      expect(h.location, AppPaths.vendorHome);
+      expect(find.text('Your profile is under review'), findsOneWidget);
+    });
+  });
 }

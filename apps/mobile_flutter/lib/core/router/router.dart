@@ -31,7 +31,6 @@ export '../../features/auth/otp_args.dart';
 /// Re-runs the redirect rules whenever the guard state changes.
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
-  ref.listen(guardStateProvider, (_, _) => refresh.value++);
   final rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
 
   /// A full-screen route that opens above the organizer tabs.
@@ -141,6 +140,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
     ],
   );
+
+  // go_router re-runs redirects on refresh only for the routes it navigated to itself, not for
+  // screens opened with `push` (the editor, an event). So when the guard state changes, apply the
+  // redirect for the current location explicitly: this is what moves a vendor off the editor after
+  // submitting, or anyone off a pushed screen when their session expires.
+  ref.listen(guardStateProvider, (_, next) {
+    refresh.value++;
+    final target = redirectFor(router.state.uri.toString(), next);
+    if (target != null) router.go(target);
+  });
 
   ref.onDispose(() {
     router.dispose();

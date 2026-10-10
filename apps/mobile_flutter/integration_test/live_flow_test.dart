@@ -192,23 +192,25 @@ void main() {
     await tapAndPump(tester, find.text('Add task').first);
     await waitFor(tester, find.text('New task'), 'new task sheet');
     await tester.enterText(find.descendant(of: find.byType(BottomSheet), matching: find.byType(TextField)), 'Buy return gifts');
-    await tapAndPump(tester, find.descendant(of: find.byType(BottomSheet), matching: find.text('Catering')));
-    await tapAndPump(tester, find.descendant(of: find.byType(BottomSheet), matching: find.text('Choose a date')));
+    await tapVisible(tester, find.descendant(of: find.byType(BottomSheet), matching: find.text('Catering')));
+    await tapVisible(tester, find.descendant(of: find.byType(BottomSheet), matching: find.text('Choose a date')));
     await waitFor(tester, find.text('OK'), 'date picker in the task sheet');
     await tapAndPump(tester, find.text('OK'));
     await tapAndPump(tester, find.descendant(of: find.byType(BottomSheet), matching: find.text('Add task')));
     await waitFor(tester, find.byWidgetPredicate((w) => w is Text && w.data != null && w.data!.startsWith('All (') && w.data != before), 'task count to change');
 
     // Budget: add a category
+    await waitFor(tester, find.widgetWithText(Tab, 'Budget'), 'event tabs after the task was added');
     await tapAndPump(tester, find.widgetWithText(Tab, 'Budget'));
+    await waitFor(tester, find.text('Add category'), 'budget tab content');
     await tapAndPump(tester, find.text('Add category').first);
     await waitFor(tester, find.text('Add budget category'), 'budget sheet');
-    await tapAndPump(tester, find.text('Something else'));
+    await tapVisible(tester, find.text('Something else'));
     final sheetFields = find.descendant(of: find.byType(BottomSheet), matching: find.byType(TextField));
     await tester.enterText(sheetFields.first, 'Return gifts');
     await tester.enterText(sheetFields.last, '20000');
     await tester.pump(const Duration(milliseconds: 300));
-    await tapAndPump(tester, find.descendant(of: find.byType(BottomSheet), matching: find.text('Add category')));
+    await tapVisible(tester, find.descendant(of: find.byType(BottomSheet), matching: find.text('Add category')));
     await waitFor(tester, find.text('Return gifts'), 'new budget category');
 
     // Back to the list and sign out
