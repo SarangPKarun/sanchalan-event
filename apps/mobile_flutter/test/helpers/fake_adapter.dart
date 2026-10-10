@@ -48,10 +48,10 @@ Object? fixture(String name) =>
 
 ResponseBody fixtureBody(String name, [int status = 200]) => jsonBody(fixture(name), status);
 
-typedef Route = FutureOr<ResponseBody> Function(RequestOptions options);
+typedef RouteHandler = FutureOr<ResponseBody> Function(RequestOptions options);
 
 /// Routes by "METHOD /path"; anything unmatched is a 404.
-Handler routes(Map<String, Route> table) => (options) async {
+Handler routes(Map<String, RouteHandler> table) => (options) async {
       final route = table['${options.method} ${options.path}'];
       if (route == null) return jsonBody({'error': 'no route'}, 404);
       return route(options);

@@ -149,6 +149,12 @@ Redirect rules:
 - Vendor by status: `published` → home, `pending_review` → under-review, `suspended` → suspended, `draft` / `rejected` → profile.
 - Re-evaluate on auth/vendor state changes (`refreshListenable`).
 
+**Status: done (guard logic final, screens are placeholders).**
+- `core/router/redirects.dart` is a pure `redirectFor(location, GuardState)` covering splash, unauthed, admin, organizer (loading, error, needs profile, ready) and each vendor status. `core/router/guard_state.dart` derives the state and only watches the data for the signed-in role. `core/router/router.dart` holds the route table and `OtpArgs`.
+- Extra routes beyond the table: `/splash`, `/organizer/loading|error`, `/vendor/loading|error` (spinner and Retry, as in the RN layouts) and `/unsupported-role` (an admin session on mobile can sign out instead of looping).
+- Routes are flat for now. The Phase 6D bottom navigation (`StatefulShellRoute`) is added in Phase 7 once the design is signed off.
+- 127 tests pass, including a check that every state and path settles after one redirect (no loops) and widget tests for each role and vendor status.
+
 ## 6. UI/UX revamp (design before screens)
 
 Goal: a friendly, modern app that a first-time family organizer or a small vendor can use without help. Do this phase **before** building screens, so Phase 7 builds from approved designs.
