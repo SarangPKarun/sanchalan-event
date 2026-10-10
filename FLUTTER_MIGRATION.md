@@ -21,7 +21,7 @@ Step-by-step plan to move the Sanchalan mobile app from Expo / React Native to F
 | State | React Context (`auth-`, `organizer-`, `vendor-context`) | `flutter_riverpod` |
 | HTTP | axios (`lib/api.ts`) | `dio` + interceptor |
 | Token storage | `expo-secure-store` (`lib/authStorage.ts`) | `flutter_secure_storage` |
-| Models | TS interfaces | `freezed` + `json_serializable` |
+| Models | TS interfaces | `json_serializable` (plain immutable classes; `freezed` resolved to a 4.0 dev release, so it is not used) |
 | Config | `EXPO_PUBLIC_API_URL` | `--dart-define=API_URL=...` |
 | Date picker | `datetimepicker` | `showDatePicker` (built in) |
 | Fonts | system | `google_fonts` |
@@ -106,6 +106,11 @@ Port from `apps/mobile/lib/`:
 4. **`types.ts` and `packages/shared-types/*` → `models/`**: port `models`, `enums`, `auth`, `vendor`, `vendor-self`, `roadmap`, `event-setup`. Use `@JsonSerializable` and run `dart run build_runner build -d`. Check each field name against `apps/backend/prisma/schema.prisma` and the API table in `spec.md`.
 
 **Exit check:** unit tests for the refresh interceptor (concurrent 401s trigger exactly one refresh) and model JSON round-trips pass.
+
+**Status: done (code and tests).** `lib/core/{auth_storage,api_client,providers,config}.dart`, `lib/models/*` and 39 tests are in place, `flutter analyze` is clean.
+- The tests found a bug the RN `api.ts` also has: with a dead session, each concurrent request cleared the tokens and fired the expiry action separately. The Dart client now ends the session once, inside the shared refresh.
+- Vendor `startingPrice` is a Prisma Decimal that the backend sends as a **string**; the models accept both strings and numbers for money.
+- [ ] Still open: check the models against real backend responses (needs a **local** database; `apps/backend/.env` points at Neon, so don't run the backend as-is for testing).
 
 ## 4. State management
 
