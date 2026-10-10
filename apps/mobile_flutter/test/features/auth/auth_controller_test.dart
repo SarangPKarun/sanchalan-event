@@ -25,29 +25,44 @@ void main() {
       expect(adapter.requests, isEmpty);
     });
 
-    test('valid refresh token + stored role -> authed with a new access token', () async {
-      final (c, _) = makeContainer(
-        routes({'POST /auth/refresh': (_) => jsonBody({'accessToken': 'new'})}),
-        secure: session,
-      );
-      expect(await settledAuth(c), const AuthState.authed(AuthRole.vendor));
-      expect(await c.read(authStorageProvider).getAccessToken(), 'new');
-      expect(await c.read(authStorageProvider).getRefreshToken(), 'refresh-1');
-    });
+    test(
+      'valid refresh token + stored role -> authed with a new access token',
+      () async {
+        final (c, _) = makeContainer(
+          routes({
+            'POST /auth/refresh': (_) => jsonBody({'accessToken': 'new'}),
+          }),
+          secure: session,
+        );
+        expect(await settledAuth(c), const AuthState.authed(AuthRole.vendor));
+        expect(await c.read(authStorageProvider).getAccessToken(), 'new');
+        expect(
+          await c.read(authStorageProvider).getRefreshToken(),
+          'refresh-1',
+        );
+      },
+    );
 
-    test('stored role missing -> tokens cleared, unauthed (force re-login)', () async {
-      final (c, _) = makeContainer(
-        routes({'POST /auth/refresh': (_) => jsonBody({'accessToken': 'new'})}),
-        secure: {accessTokenKey: 'old', refreshTokenKey: 'refresh-1'},
-      );
-      expect(await settledAuth(c), const AuthState.unauthed());
-      expect(await c.read(authStorageProvider).getRefreshToken(), isNull);
-    });
+    test(
+      'stored role missing -> tokens cleared, unauthed (force re-login)',
+      () async {
+        final (c, _) = makeContainer(
+          routes({
+            'POST /auth/refresh': (_) => jsonBody({'accessToken': 'new'}),
+          }),
+          secure: {accessTokenKey: 'old', refreshTokenKey: 'refresh-1'},
+        );
+        expect(await settledAuth(c), const AuthState.unauthed());
+        expect(await c.read(authStorageProvider).getRefreshToken(), isNull);
+      },
+    );
 
     for (final status in [401, 403]) {
       test('refresh rejected ($status) -> cleared, unauthed', () async {
         final (c, _) = makeContainer(
-          routes({'POST /auth/refresh': (_) => jsonBody({'error': 'revoked'}, status)}),
+          routes({
+            'POST /auth/refresh': (_) => jsonBody({'error': 'revoked'}, status),
+          }),
           secure: session,
         );
         expect(await settledAuth(c), const AuthState.unauthed());
@@ -57,7 +72,9 @@ void main() {
 
     test('server error + cached role -> authed, session kept', () async {
       final (c, _) = makeContainer(
-        routes({'POST /auth/refresh': (_) => jsonBody({'error': 'boom'}, 503)}),
+        routes({
+          'POST /auth/refresh': (_) => jsonBody({'error': 'boom'}, 503),
+        }),
         secure: session,
       );
       expect(await settledAuth(c), const AuthState.authed(AuthRole.vendor));
@@ -66,7 +83,10 @@ void main() {
 
     test('offline + no cached role -> unauthed, tokens kept', () async {
       final (c, _) = makeContainer(
-        (o) async => throw DioException.connectionError(requestOptions: o, reason: 'offline'),
+        (o) async => throw DioException.connectionError(
+          requestOptions: o,
+          reason: 'offline',
+        ),
         secure: {accessTokenKey: 'old', refreshTokenKey: 'refresh-1'},
       );
       expect(await settledAuth(c), const AuthState.unauthed());
@@ -78,13 +98,20 @@ void main() {
     test('signIn stores tokens and role and flips to authed', () async {
       final (c, _) = makeContainer(routes({}));
       await settledAuth(c);
-      await c.read(authControllerProvider.notifier).signIn(const AuthTokens(
-            accessToken: 'a',
-            refreshToken: 'r',
-            role: AuthRole.organizer,
-            userId: 'u1',
-          ));
-      expect(c.read(authControllerProvider), const AuthState.authed(AuthRole.organizer));
+      await c
+          .read(authControllerProvider.notifier)
+          .signIn(
+            const AuthTokens(
+              accessToken: 'a',
+              refreshToken: 'r',
+              role: AuthRole.organizer,
+              userId: 'u1',
+            ),
+          );
+      expect(
+        c.read(authControllerProvider),
+        const AuthState.authed(AuthRole.organizer),
+      );
       final storage = c.read(authStorageProvider);
       expect(await storage.getAccessToken(), 'a');
       expect(await storage.getRefreshToken(), 'r');
@@ -149,25 +176,40 @@ void main() {
       expect(await c.read(authStorageProvider).getRefreshToken(), isNull);
     });
 
-    test('signing out resets the organizer data for the next user', () async {
-      final (c, adapter) = makeContainer(
-        routes({
-          'POST /auth/refresh': (_) => jsonBody({'accessToken': 'new'}),
-          'POST /auth/logout': (_) => jsonBody({}),
-          'GET /organizers/me': (_) => fixtureBody('organizer_me_fresh'),
-        }),
-        secure: {...session, roleKey: 'organizer'},
-      );
-      await settledAuth(c);
-      final sub = c.listen(organizerDataProvider, (_, _) {});
-      addTearDown(sub.close);
-      await c.read(organizerDataProvider.future);
-      expect(adapter.count('/organizers/me'), 1);
+    test(
+      'the next sign-in starts with fresh organizer data, sign-out makes no request',
+      () async {
+        final (c, adapter) = makeContainer(
+          routes({
+            'POST /auth/refresh': (_) => jsonBody({'accessToken': 'new'}),
+            'POST /auth/logout': (_) => jsonBody({}),
+            'GET /organizers/me': (_) => fixtureBody('organizer_me_fresh'),
+          }),
+          secure: {...session, roleKey: 'organizer'},
+        );
+        await settledAuth(c);
+        final sub = c.listen(organizerDataProvider, (_, _) {});
+        addTearDown(sub.close);
+        await c.read(organizerDataProvider.future);
+        expect(adapter.count('/organizers/me'), 1);
 
-      await c.read(authControllerProvider.notifier).signOut();
-      await c.read(organizerDataProvider.future);
-      expect(adapter.count('/organizers/me'), 2);
-    });
+        await c.read(authControllerProvider.notifier).signOut();
+        expect(adapter.count('/organizers/me'), 1);
+
+        await c
+            .read(authControllerProvider.notifier)
+            .signIn(
+              const AuthTokens(
+                accessToken: 'a2',
+                refreshToken: 'r2',
+                role: AuthRole.organizer,
+                userId: 'u2',
+              ),
+            );
+        await c.read(organizerDataProvider.future);
+        expect(adapter.count('/organizers/me'), 2);
+      },
+    );
   });
 }
 
