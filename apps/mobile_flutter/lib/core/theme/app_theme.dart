@@ -174,6 +174,15 @@ ThemeData buildAppTheme() {
       extendedTextStyle: textTheme.labelLarge,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.l)),
     ),
+    tabBarTheme: TabBarThemeData(
+      labelColor: AppColors.primary,
+      unselectedLabelColor: AppColors.inkMuted,
+      indicatorColor: AppColors.primary,
+      dividerColor: AppColors.outline,
+      labelStyle: textTheme.labelLarge,
+      unselectedLabelStyle: textTheme.labelLarge,
+      indicatorSize: TabBarIndicatorSize.tab,
+    ),
     dividerTheme: const DividerThemeData(color: AppColors.outline, space: 1, thickness: 1),
     progressIndicatorTheme: const ProgressIndicatorThemeData(
       color: AppColors.primary,
