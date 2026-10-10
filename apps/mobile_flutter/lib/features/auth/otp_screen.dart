@@ -149,6 +149,11 @@ class _OtpScreenState extends State<OtpScreen> {
                         alignment: Alignment.centerLeft,
                         child: TextButton(
                           onPressed: widget.onChangeNumber,
+                          // No side padding, so the text lines up with the heading.
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            alignment: Alignment.centerLeft,
+                          ),
                           child: const Text('Change number'),
                         ),
                       ),
