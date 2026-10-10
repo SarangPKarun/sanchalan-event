@@ -21,7 +21,7 @@ String? redirectFor(String location, GuardState g, {bool allowDev = kDebugMode})
     case AuthStatus.loading:
       return to(AppPaths.splash);
     case AuthStatus.unauthed:
-      return path == AppPaths.phone || path == AppPaths.otp ? null : AppPaths.phone;
+      return AppPaths.isAuthPath(path) ? null : AppPaths.welcome;
     case AuthStatus.authed:
       break;
   }
@@ -40,7 +40,7 @@ String? redirectFor(String location, GuardState g, {bool allowDev = kDebugMode})
         case OrganizerPhase.needsProfile:
           return to(AppPaths.profileSetup);
         case OrganizerPhase.ready:
-          return AppPaths.isOrganizerAppPath(path) ? null : AppPaths.events;
+          return AppPaths.isOrganizerAppPath(path) ? null : AppPaths.home;
       }
 
     case AuthRole.vendor:
@@ -56,20 +56,21 @@ String? redirectFor(String location, GuardState g, {bool allowDev = kDebugMode})
   }
 }
 
-/// The vendor screen each status lands on.
+/// Every vendor lands on the dashboard, which changes with the status.
 String defaultVendorPath(VendorPhase phase) => switch (phase) {
-      VendorPhase.published => AppPaths.vendorHome,
-      VendorPhase.pendingReview => AppPaths.vendorUnderReview,
-      VendorPhase.suspended => AppPaths.vendorSuspended,
-      VendorPhase.draft || VendorPhase.rejected => AppPaths.vendorProfile,
       VendorPhase.loading => AppPaths.vendorLoading,
       VendorPhase.error => AppPaths.vendorError,
+      _ => AppPaths.vendorHome,
     };
 
-/// Screens a vendor may open in each status. A published vendor reaches the
-/// profile editor through "Edit"; the other statuses are locked to one screen.
+/// Screens a vendor may open in each status. The profile editor is for
+/// vendors who can edit (draft, rejected, published); a pending or suspended
+/// vendor only sees the dashboard.
 Set<String> allowedVendorPaths(VendorPhase phase) => switch (phase) {
-      VendorPhase.published => {AppPaths.vendorHome, AppPaths.vendorProfile},
+      VendorPhase.draft || VendorPhase.rejected || VendorPhase.published => {
+          AppPaths.vendorHome,
+          AppPaths.vendorProfile,
+        },
+      VendorPhase.pendingReview || VendorPhase.suspended => {AppPaths.vendorHome},
       VendorPhase.loading || VendorPhase.error => const {},
-      _ => {defaultVendorPath(phase)},
     };

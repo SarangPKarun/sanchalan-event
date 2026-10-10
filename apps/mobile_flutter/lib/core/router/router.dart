@@ -5,7 +5,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../dev/dev_routes.dart';
 import '../../features/auth/unsupported_role_screen.dart';
+import '../../features/auth/welcome_screen.dart';
 import '../../features/organizer/organizer_providers.dart';
+import '../../features/organizer/organizer_shell.dart';
 import '../../features/vendor/vendor_providers.dart';
 import '../../models/enums.dart';
 import '../../shared/widgets/data_error_screen.dart';
@@ -24,16 +26,24 @@ class OtpArgs {
   final AuthRole role;
 }
 
-GoRoute _route(String path, Widget Function(GoRouterState state) builder, {GoRouterRedirect? redirect}) =>
-    GoRoute(path: path, redirect: redirect, builder: (context, state) => builder(state));
-
 /// Re-runs the redirect rules whenever the guard state changes.
-/// Screens are placeholders until Phase 7; the guard logic is final.
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
   ref.listen(guardStateProvider, (_, _) => refresh.value++);
+  final rootKey = GlobalKey<NavigatorState>(debugLabel: 'root');
+
+  /// A full-screen route that opens above the organizer tabs.
+  GoRoute full(String path, Widget Function(GoRouterState state) builder) => GoRoute(
+        path: path,
+        parentNavigatorKey: rootKey,
+        builder: (context, state) => builder(state),
+      );
+
+  GoRoute tab(String path, Widget Function(GoRouterState state) builder) =>
+      GoRoute(path: path, builder: (context, state) => builder(state));
 
   final router = GoRouter(
+    navigatorKey: rootKey,
     // Debug builds can open straight on a preview:
     // flutter run --dart-define=START_ROUTE=/dev/gallery
     initialLocation: kDebugMode
@@ -42,13 +52,17 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: refresh,
     redirect: (context, state) => redirectFor(state.uri.toString(), ref.read(guardStateProvider)),
     routes: [
-      _route(AppPaths.splash, (_) => const DataLoadingScreen()),
-      _route(AppPaths.unsupportedRole, (_) => const UnsupportedRoleScreen()),
+      GoRoute(path: AppPaths.splash, builder: (_, _) => const DataLoadingScreen()),
+      GoRoute(path: AppPaths.unsupportedRole, builder: (_, _) => const UnsupportedRoleScreen()),
 
       // Design previews: debug builds only
       if (kDebugMode) ...devRoutes(),
 
       // Auth
+      GoRoute(
+        path: AppPaths.welcome,
+        builder: (context, state) => WelcomeScreen(onGetStarted: () => context.go(AppPaths.phone)),
+      ),
       GoRoute(
         path: AppPaths.phone,
         builder: (context, state) => PlaceholderScreen(
@@ -63,9 +77,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           ],
         ),
       ),
-      _route(
-        AppPaths.otp,
-        (state) {
+      GoRoute(
+        path: AppPaths.otp,
+        builder: (context, state) {
           final args = state.extra! as OtpArgs;
           return PlaceholderScreen('Verify OTP', detail: args.phoneNumber);
         },
@@ -73,22 +87,30 @@ final routerProvider = Provider<GoRouter>((ref) {
         redirect: (context, state) => state.extra is OtpArgs ? null : AppPaths.phone,
       ),
 
-      // Organizer
-      _route(AppPaths.profileSetup, (_) => const PlaceholderScreen('Set up your profile')),
-      _route(AppPaths.events, (_) => const PlaceholderScreen('My events')),
-      _route(AppPaths.eventSetup, (_) => const PlaceholderScreen('New event')),
-      _route(
-        AppPaths.eventHomePattern,
-        (state) => PlaceholderScreen('Event', detail: state.pathParameters['id']),
+      // Organizer: tabs
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, shell) => OrganizerShell(
+          body: shell,
+          currentIndex: shell.currentIndex,
+          onSelect: (i) => shell.goBranch(i, initialLocation: i == shell.currentIndex),
+        ),
+        branches: [
+          StatefulShellBranch(routes: [tab(AppPaths.home, (_) => const PlaceholderScreen('Home'))]),
+          StatefulShellBranch(routes: [tab(AppPaths.events, (_) => const PlaceholderScreen('My events'))]),
+          StatefulShellBranch(routes: [
+            tab(AppPaths.vendors, (s) => PlaceholderScreen('Vendors', detail: s.uri.queryParameters['category'])),
+          ]),
+          StatefulShellBranch(routes: [tab(AppPaths.profile, (_) => const PlaceholderScreen('Profile'))]),
+        ],
       ),
-      _route(
-        AppPaths.vendors,
-        (state) => PlaceholderScreen('Vendors', detail: state.uri.queryParameters['eventGroupId']),
-      ),
-      _route(
-        AppPaths.vendorDetailPattern,
-        (state) => PlaceholderScreen('Vendor', detail: state.pathParameters['id']),
-      ),
+
+      // Organizer: full-screen routes
+      full(AppPaths.profileSetup, (_) => const PlaceholderScreen('Set up your profile')),
+      full(AppPaths.profileEdit, (_) => const PlaceholderScreen('Edit profile')),
+      full(AppPaths.eventSetup, (_) => const PlaceholderScreen('New event')),
+      full(AppPaths.eventHomePattern, (s) => PlaceholderScreen('Event', detail: s.pathParameters['id'])),
+      full(AppPaths.eventEditPattern, (s) => PlaceholderScreen('Edit event', detail: s.pathParameters['id'])),
+      full(AppPaths.vendorDetailPattern, (s) => PlaceholderScreen('Vendor', detail: s.pathParameters['id'])),
       GoRoute(
         path: AppPaths.organizerLoading,
         builder: (context, state) => const DataLoadingScreen(),
@@ -103,10 +125,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // Vendor
-      _route(AppPaths.vendorHome, (_) => const PlaceholderScreen('Vendor home')),
-      _route(AppPaths.vendorProfile, (_) => const PlaceholderScreen('Vendor profile')),
-      _route(AppPaths.vendorUnderReview, (_) => const PlaceholderScreen('Under review')),
-      _route(AppPaths.vendorSuspended, (_) => const PlaceholderScreen('Suspended')),
+      GoRoute(path: AppPaths.vendorHome, builder: (_, _) => const PlaceholderScreen('Vendor home')),
+      GoRoute(path: AppPaths.vendorProfile, builder: (_, _) => const PlaceholderScreen('Vendor profile')),
       GoRoute(
         path: AppPaths.vendorLoading,
         builder: (context, state) => const DataLoadingScreen(),

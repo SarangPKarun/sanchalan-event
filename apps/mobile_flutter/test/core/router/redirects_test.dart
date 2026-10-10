@@ -18,26 +18,44 @@ GuardState vendor(VendorPhase p) =>
 final allPaths = [
   AppPaths.splash,
   AppPaths.unsupportedRole,
+  AppPaths.welcome,
   AppPaths.phone,
   AppPaths.otp,
-  AppPaths.profileSetup,
+  AppPaths.home,
   AppPaths.events,
+  AppPaths.vendors,
+  '${AppPaths.vendors}?category=catering',
+  AppPaths.profile,
+  AppPaths.profileSetup,
+  AppPaths.profileEdit,
   AppPaths.eventSetup,
   AppPaths.eventHome('e1'),
-  '${AppPaths.vendors}?eventGroupId=e1',
+  AppPaths.eventEdit('e1'),
   AppPaths.vendorDetail('v1'),
   AppPaths.organizerLoading,
   AppPaths.organizerError,
   AppPaths.vendorHome,
   AppPaths.vendorProfile,
-  AppPaths.vendorUnderReview,
-  AppPaths.vendorSuspended,
   AppPaths.vendorLoading,
   AppPaths.vendorError,
   '/nowhere',
 ];
 
+/// Where the user ends up from [location]: the redirect target, or [location] itself.
 String settled(String location, GuardState g) => redirectFor(location, g) ?? location;
+
+final organizerAppPaths = [
+  AppPaths.home,
+  AppPaths.events,
+  AppPaths.vendors,
+  '${AppPaths.vendors}?category=catering',
+  AppPaths.profile,
+  AppPaths.profileEdit,
+  AppPaths.eventSetup,
+  AppPaths.eventHome('e1'),
+  AppPaths.eventEdit('e1'),
+  AppPaths.vendorDetail('v1'),
+];
 
 void main() {
   group('auth', () {
@@ -47,11 +65,12 @@ void main() {
       }
     });
 
-    test('unauthed users only see phone and otp', () {
-      expect(redirectFor(AppPaths.phone, unauthed), isNull);
-      expect(redirectFor(AppPaths.otp, unauthed), isNull);
-      for (final p in allPaths.where((p) => p != AppPaths.phone && p != AppPaths.otp)) {
-        expect(redirectFor(p, unauthed), AppPaths.phone, reason: p);
+    test('unauthed users only see welcome, phone and otp', () {
+      for (final p in [AppPaths.welcome, AppPaths.phone, AppPaths.otp]) {
+        expect(redirectFor(p, unauthed), isNull, reason: p);
+      }
+      for (final p in allPaths.where((p) => ![AppPaths.welcome, AppPaths.phone, AppPaths.otp].contains(p))) {
+        expect(redirectFor(p, unauthed), AppPaths.welcome, reason: p);
       }
     });
 
@@ -76,31 +95,23 @@ void main() {
       }
     });
 
-    test('ready: organizer screens allowed, everything else goes to /events', () {
-      final g = organizer(OrganizerPhase.ready);
-      for (final p in [
-        AppPaths.events,
-        AppPaths.eventSetup,
-        AppPaths.eventHome('e1'),
-        '${AppPaths.vendors}?eventGroupId=e1',
-        AppPaths.vendors,
-        AppPaths.vendorDetail('v1'),
-      ]) {
-        expect(redirectFor(p, g), isNull, reason: p);
+    test('ready: every organizer screen is allowed', () {
+      for (final p in organizerAppPaths) {
+        expect(redirectFor(p, organizer(OrganizerPhase.ready)), isNull, reason: p);
       }
-      for (final p in [
-        AppPaths.splash,
-        AppPaths.phone,
-        AppPaths.otp,
-        AppPaths.profileSetup,
-        AppPaths.organizerLoading,
-        AppPaths.organizerError,
-        AppPaths.vendorHome,
-        AppPaths.vendorProfile,
-        AppPaths.unsupportedRole,
-        '/nowhere',
-      ]) {
-        expect(redirectFor(p, g), AppPaths.events, reason: p);
+    });
+
+    test('ready: everything else goes to /home', () {
+      final g = organizer(OrganizerPhase.ready);
+      for (final p in allPaths.where((p) => !organizerAppPaths.contains(p))) {
+        expect(redirectFor(p, g), AppPaths.home, reason: p);
+      }
+    });
+
+    test('ready: the sign-in screens and profile setup are not reachable', () {
+      final g = organizer(OrganizerPhase.ready);
+      for (final p in [AppPaths.welcome, AppPaths.phone, AppPaths.otp, AppPaths.profileSetup, AppPaths.vendorHome]) {
+        expect(redirectFor(p, g), AppPaths.home, reason: p);
       }
     });
   });
@@ -113,44 +124,41 @@ void main() {
       }
     });
 
-    const expectedDefault = {
-      VendorPhase.published: AppPaths.vendorHome,
-      VendorPhase.pendingReview: AppPaths.vendorUnderReview,
-      VendorPhase.suspended: AppPaths.vendorSuspended,
-      VendorPhase.draft: AppPaths.vendorProfile,
-      VendorPhase.rejected: AppPaths.vendorProfile,
-    };
+    test('draft, rejected and published vendors may open the dashboard and the editor', () {
+      for (final phase in [VendorPhase.draft, VendorPhase.rejected, VendorPhase.published]) {
+        final g = vendor(phase);
+        expect(redirectFor(AppPaths.vendorHome, g), isNull, reason: phase.name);
+        expect(redirectFor(AppPaths.vendorProfile, g), isNull, reason: phase.name);
+      }
+    });
 
-    for (final entry in expectedDefault.entries) {
-      test('${entry.key.name}: lands on ${entry.value}', () {
-        final g = vendor(entry.key);
-        // From anywhere that is not allowed, the user ends up on the default.
-        for (final p in allPaths.where((p) => !allowedVendorPaths(entry.key).contains(p))) {
-          expect(settled(p, g), entry.value, reason: p);
+    test('pending and suspended vendors only see the dashboard', () {
+      for (final phase in [VendorPhase.pendingReview, VendorPhase.suspended]) {
+        final g = vendor(phase);
+        expect(redirectFor(AppPaths.vendorHome, g), isNull, reason: phase.name);
+        expect(redirectFor(AppPaths.vendorProfile, g), AppPaths.vendorHome, reason: phase.name);
+      }
+    });
+
+    test('everything else leads to the dashboard, for every status', () {
+      for (final phase in VendorPhase.values.where((p) => p != VendorPhase.loading && p != VendorPhase.error)) {
+        final g = vendor(phase);
+        for (final p in allPaths.where((p) => p != AppPaths.vendorHome && p != AppPaths.vendorProfile)) {
+          expect(settled(p, g), AppPaths.vendorHome, reason: '${phase.name}: $p');
         }
-        expect(redirectFor(entry.value, g), isNull);
-      });
-    }
-
-    test('a published vendor can open both home and the profile editor', () {
-      final g = vendor(VendorPhase.published);
-      expect(redirectFor(AppPaths.vendorHome, g), isNull);
-      expect(redirectFor(AppPaths.vendorProfile, g), isNull);
+      }
     });
 
-    test('other statuses are locked to a single screen', () {
-      expect(redirectFor(AppPaths.vendorProfile, vendor(VendorPhase.pendingReview)),
-          AppPaths.vendorUnderReview);
-      expect(redirectFor(AppPaths.vendorHome, vendor(VendorPhase.draft)), AppPaths.vendorProfile);
-      expect(redirectFor(AppPaths.vendorProfile, vendor(VendorPhase.suspended)),
-          AppPaths.vendorSuspended);
-      expect(redirectFor(AppPaths.vendorHome, vendor(VendorPhase.rejected)), AppPaths.vendorProfile);
-    });
-
-    test('organizer routes are not reachable by a vendor', () {
-      for (final p in [AppPaths.events, AppPaths.eventSetup, AppPaths.vendors]) {
+    test('organizer screens are not reachable by a vendor', () {
+      for (final p in organizerAppPaths) {
         expect(redirectFor(p, vendor(VendorPhase.published)), AppPaths.vendorHome, reason: p);
       }
+    });
+
+    test('a status change moves the vendor off a screen they may no longer open', () {
+      // Published vendor editing, then sent back to review: the editor closes.
+      expect(redirectFor(AppPaths.vendorProfile, vendor(VendorPhase.published)), isNull);
+      expect(redirectFor(AppPaths.vendorProfile, vendor(VendorPhase.pendingReview)), AppPaths.vendorHome);
     });
   });
 
@@ -181,12 +189,12 @@ void main() {
     });
 
     test('/dev routes are guarded like any other path in release builds', () {
-      expect(redirectFor('/dev', unauthed, allowDev: false), AppPaths.phone);
-      expect(redirectFor('/dev/gallery', organizer(OrganizerPhase.ready), allowDev: false), AppPaths.events);
+      expect(redirectFor('/dev', unauthed, allowDev: false), AppPaths.welcome);
+      expect(redirectFor('/dev/gallery', organizer(OrganizerPhase.ready), allowDev: false), AppPaths.home);
     });
 
     test('a path that only starts with the letters dev is not a preview', () {
-      expect(redirectFor('/device', unauthed, allowDev: true), AppPaths.phone);
+      expect(redirectFor('/device', unauthed, allowDev: true), AppPaths.welcome);
     });
   });
 }

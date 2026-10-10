@@ -15,6 +15,6 @@ void main() {
     ));
     await tester.pumpAndSettle();
     expect(find.byType(Scaffold), findsOneWidget);
-    expect(find.text('Sign in'), findsWidgets);
+    expect(find.text('Plan every celebration, stress-free'), findsOneWidget);
   });
 }

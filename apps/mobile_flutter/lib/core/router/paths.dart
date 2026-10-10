@@ -1,5 +1,4 @@
-/// Every route path in one place. Screens are built in Phase 7; until then each
-/// path renders a placeholder.
+/// Every route path in one place.
 abstract final class AppPaths {
   // Shared
   static const splash = '/splash';
@@ -9,16 +8,24 @@ abstract final class AppPaths {
   static const dev = '/dev';
 
   // Auth
+  static const welcome = '/welcome';
   static const phone = '/phone';
   static const otp = '/otp';
 
-  // Organizer
-  static const profileSetup = '/profile-setup';
+  // Organizer: the four tabs of the bottom navigation
+  static const home = '/home';
   static const events = '/events';
+  static const vendors = '/vendors';
+  static const profile = '/profile';
+
+  // Organizer: full-screen routes above the tabs
+  static const profileSetup = '/profile-setup';
+  static const profileEdit = '/profile-edit';
   static const eventSetup = '/event-setup';
   static const eventHomePattern = '/event-home/:id';
   static String eventHome(String id) => '/event-home/$id';
-  static const vendors = '/vendors';
+  static const eventEditPattern = '/event-edit/:id';
+  static String eventEdit(String id) => '/event-edit/$id';
   static const vendorDetailPattern = '/vendors/:id';
   static String vendorDetail(String id) => '/vendors/$id';
   static const organizerLoading = '/organizer/loading';
@@ -27,16 +34,21 @@ abstract final class AppPaths {
   // Vendor
   static const vendorHome = '/vendor/home';
   static const vendorProfile = '/vendor/profile';
-  static const vendorUnderReview = '/vendor/under-review';
-  static const vendorSuspended = '/vendor/suspended';
   static const vendorLoading = '/vendor/loading';
   static const vendorError = '/vendor/error';
 
+  /// Screens a signed-out user can see.
+  static bool isAuthPath(String path) => path == welcome || path == phone || path == otp;
+
   /// Organizer screens reachable once the profile is complete.
   static bool isOrganizerAppPath(String path) =>
+      path == home ||
       path == events ||
+      path == vendors ||
+      path == profile ||
+      path == profileEdit ||
       path == eventSetup ||
       path.startsWith('/event-home/') ||
-      path == vendors ||
+      path.startsWith('/event-edit/') ||
       path.startsWith('/vendors/');
 }

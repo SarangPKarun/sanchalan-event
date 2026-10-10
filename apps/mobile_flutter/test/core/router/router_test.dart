@@ -41,8 +41,8 @@ Object? vendorWithStatus(String fixtureName, String status) =>
 void main() {
   testWidgets('no stored session -> sign-in screen', (tester) async {
     final c = await pumpApp(tester, routes({}));
-    expect(location(c), AppPaths.phone);
-    expect(find.text('Sign in'), findsWidgets);
+    expect(location(c), AppPaths.welcome);
+    expect(find.text('Plan every celebration, stress-free'), findsOneWidget);
   });
 
   group('organizer', () {
@@ -69,8 +69,8 @@ void main() {
         }),
         secure: session('organizer'),
       );
-      expect(location(c), AppPaths.events);
-      expect(find.text('My events'), findsWidgets);
+      expect(location(c), AppPaths.home);
+      expect(find.text('Home'), findsWidgets);
     });
 
     testWidgets('a failed load shows Retry, and Retry recovers', (tester) async {
@@ -91,10 +91,10 @@ void main() {
       fail = false;
       await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
-      expect(location(c), AppPaths.events);
+      expect(location(c), AppPaths.home);
     });
 
-    testWidgets('signing out returns to /phone', (tester) async {
+    testWidgets('signing out returns to /welcome', (tester) async {
       final c = await pumpApp(
         tester,
         routes({
@@ -105,12 +105,12 @@ void main() {
         }),
         secure: session('organizer'),
       );
-      expect(location(c), AppPaths.events);
+      expect(location(c), AppPaths.home);
 
       // Not awaited: inside testWidgets, time only advances while pumping.
       unawaited(c.read(authControllerProvider.notifier).signOut());
       await tester.pumpAndSettle();
-      expect(location(c), AppPaths.phone);
+      expect(location(c), AppPaths.welcome);
     });
 
     testWidgets('an organizer cannot open vendor screens', (tester) async {
@@ -125,7 +125,7 @@ void main() {
       );
       c.read(routerProvider).go(AppPaths.vendorHome);
       await tester.pumpAndSettle();
-      expect(location(c), AppPaths.events);
+      expect(location(c), AppPaths.home);
     });
   });
 
@@ -135,12 +135,13 @@ void main() {
           'GET /vendor/me': (_) => jsonBody(body),
         });
 
+    // Every status lands on the dashboard, which adapts to the status.
     final cases = {
-      'draft': (AppPaths.vendorProfile, 'Vendor profile'),
-      'rejected': (AppPaths.vendorProfile, 'Vendor profile'),
-      'pending_review': (AppPaths.vendorUnderReview, 'Under review'),
+      'draft': (AppPaths.vendorHome, 'Vendor home'),
+      'rejected': (AppPaths.vendorHome, 'Vendor home'),
+      'pending_review': (AppPaths.vendorHome, 'Vendor home'),
       'published': (AppPaths.vendorHome, 'Vendor home'),
-      'suspended': (AppPaths.vendorSuspended, 'Suspended'),
+      'suspended': (AppPaths.vendorHome, 'Vendor home'),
     };
     for (final entry in cases.entries) {
       testWidgets('${entry.key} -> ${entry.value.$1}', (tester) async {
@@ -154,14 +155,17 @@ void main() {
       });
     }
 
-    testWidgets('submitting for review moves the vendor to under-review', (tester) async {
+    testWidgets('the editor closes when a status change no longer allows editing', (tester) async {
       final c = await pumpApp(tester, vendorMe(fixture('vendor_me_draft')), secure: session('vendor'));
-      expect(location(c), AppPaths.vendorProfile);
+      expect(location(c), AppPaths.vendorHome);
+      c.read(routerProvider).go(AppPaths.vendorProfile);
+      await tester.pumpAndSettle();
+      expect(location(c), AppPaths.vendorProfile); // a draft may edit
 
       final submitted = VendorMeResponse.fromJson(fixture('vendor_submit') as Map<String, dynamic>);
       c.read(vendorDataProvider.notifier).apply(submitted);
       await tester.pumpAndSettle();
-      expect(location(c), AppPaths.vendorUnderReview);
+      expect(location(c), AppPaths.vendorHome); // pending: back to the dashboard
     });
 
     testWidgets('a failed load shows Retry', (tester) async {
@@ -180,7 +184,7 @@ void main() {
       fail = false;
       await tester.tap(find.text('Retry'));
       await tester.pumpAndSettle();
-      expect(location(c), AppPaths.vendorProfile);
+      expect(location(c), AppPaths.vendorHome);
     });
   });
 
