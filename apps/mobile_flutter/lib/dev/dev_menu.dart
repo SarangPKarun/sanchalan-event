@@ -13,17 +13,20 @@ class DevEntry {
 }
 
 const devEntries = [
-  DevEntry('/dev/o/vendor/v1', 'Vendor detail', 'Facts, past work, links, Call and WhatsApp'),
+  // Sign-in
+  DevEntry('/dev/welcome', 'Sign-in flow', 'Welcome, then phone, then OTP (mock)'),
+  DevEntry('/dev/phone', 'Phone number', 'Role choice and number entry (mock)'),
+  DevEntry('/dev/otp', 'OTP', 'Six-digit code; 123456 succeeds, anything else fails (mock)'),
+  // Organizer
+  DevEntry('/dev/o/home', 'Organizer app', 'Home, Events, Vendors, Profile with a data scenario switcher'),
   DevEntry('/dev/o/event/ev-wedding', 'Event detail', 'Roadmap, Budget and Vendors tabs; tasks and budget are editable'),
   DevEntry('/dev/o/event/ev-new', 'Event without a roadmap', 'Generate flow with the waiting screen'),
   DevEntry('/dev/o/new-event', 'New event form', 'A name containing "fail" shows the error state'),
   DevEntry('/dev/o/edit-event/ev-wedding', 'Edit event form', 'Change the budget to see the rescale choice'),
   DevEntry('/dev/o/profile-setup', 'Profile setup', 'Name and who is organizing'),
-  DevEntry('/dev/o/home', 'Organizer app', 'Home, Events, Vendors, Profile with a data scenario switcher'),
+  DevEntry('/dev/o/vendor/v1', 'Vendor detail', 'Facts, past work, links, Call and WhatsApp'),
+  // Design system
   DevEntry('/dev/gallery', 'Design gallery', 'Colors, type and every widget'),
-  DevEntry('/dev/welcome', 'Welcome to sign-in flow', 'Welcome, then phone, then OTP (mock)'),
-  DevEntry('/dev/phone', 'Phone number', 'Role choice and number entry (mock)'),
-  DevEntry('/dev/otp', 'OTP', 'Six-digit code, any code except 123456 fails (mock)'),
 ];
 
 /// Debug-only list of design previews, reachable from the sign-in placeholder.
