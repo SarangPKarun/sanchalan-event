@@ -45,6 +45,7 @@ void main() {
     'maroon on surface': (AppColors.maroon, AppColors.surface),
     'maroon on maroonContainer': (AppColors.maroon, AppColors.maroonContainer),
     'onMaroon on maroon': (AppColors.onMaroon, AppColors.maroon),
+    'goldContainer on maroon (hero card text)': (AppColors.goldContainer, AppColors.maroon),
     'onGoldContainer on goldContainer': (AppColors.onGoldContainer, AppColors.goldContainer),
     'errorText on surface': (AppColors.errorText, AppColors.surface),
     'errorText on background': (AppColors.errorText, AppColors.background),
@@ -64,6 +65,10 @@ void main() {
       expect(ratio, greaterThanOrEqualTo(4.5), reason: '${tone.name} is ${ratio.toStringAsFixed(2)}:1');
     });
   }
+
+  test('gold accents (rings, icons) are at least 3:1 on maroon (non-text, never text)', () {
+    expect(contrast(AppColors.gold, AppColors.maroon), greaterThanOrEqualTo(3));
+  });
 
   test('error icon color is at least 3:1 on surface (non-text)', () {
     expect(contrast(AppColors.error, AppColors.surface), greaterThanOrEqualTo(3));
