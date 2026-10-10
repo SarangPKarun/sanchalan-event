@@ -282,7 +282,10 @@ Order by risk. For each screen: build the **revamped** UI from Phase 6, wire it 
 - 530 tests pass: connector tests use the recorded real responses and check the requests that are sent (method, path, body, timeouts), including error and confirmation paths.
 - Left: the end-to-end check on the phone against the real backend (below), then Phase 8 onwards.
 
-**Live check on the phone** (against a local backend on the Neon database in `apps/backend/.env`, phone reaching it with `adb reverse tcp:3000 tcp:3000`): see the results recorded here once done.
+**Live check on the phone** (a local backend on the Neon database in `apps/backend/.env`; the phone reaches it with `adb reverse tcp:3000 tcp:3000`): `integration_test/live_flow_test.dart` drives the real app on the device against the real backend (it is not part of `flutter test`). Run it with `flutter test integration_test/live_flow_test.dart -d <device> --dart-define=API_URL=http://localhost:3000 --dart-define=ADMIN_PASSWORD=...`. The phone must be unlocked, and Xiaomi asks to approve every USB install on screen (enable "Install via USB" in Developer options to skip that).
+- **Verified so far on the device with the real backend:** welcome, phone, OTP sign-in for an organizer and a vendor, organizer profile setup, the empty home screen, and the whole vendor journey up to submit (every profile field, a category and a past-work entry saved; the profile reached `pending_review` on the server).
+- **Found:** after a successful submit the editor stayed on screen in the first runs. The app's models parse the server's real answers fine, so the likely cause is a response lost after the server had finished. Submit and withdraw now re-check the real status after a network error instead of reporting a failure (covered by new tests); the next device run will confirm, because it now logs every API call with its status and time.
+- **Still to run:** the organizer event, roadmap, task and budget steps (the first run stopped at the date picker, fixed by scrolling it into view), admin approval, the vendor appearing in the directory, session restore after a restart, and token refresh.
 ## 8. Platform configuration
 
 - [ ] App name "Sanchalan", launcher icon (`flutter_launcher_icons`) and native splash (`flutter_native_splash`) from `apps/mobile/assets`, restyled to match the new brand.

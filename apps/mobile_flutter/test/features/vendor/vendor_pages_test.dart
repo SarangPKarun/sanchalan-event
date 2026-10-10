@@ -386,4 +386,61 @@ void main() {
       expect(h.last('PATCH', '/vendor/me').data, {'instagramUrl': null});
     });
   });
+
+  group('lost answers', () {
+    ResponseBody lost(RequestOptions o) =>
+        throw DioException.connectionError(requestOptions: o, reason: 'connection dropped');
+
+    testWidgets('a submit whose answer was lost is not reported as failed when the server did submit', (tester) async {
+      var submitted = false;
+      final h = await pumpVendor(
+        tester,
+        () => throw StateError('unused'),
+        overrides: {
+          'GET /vendor/me': (_) => jsonBody(submitted ? me('vendor_submit') : me('vendor_me_published', status: 'draft')),
+          'POST /vendor/me/submit': (o) {
+            submitted = true; // the server finished...
+            return lost(o); // ...but the answer never arrived
+          },
+        },
+      );
+      h.go(AppPaths.vendorProfile);
+      await tester.pumpAndSettle();
+      await tap(tester, find.text('Submit for review'));
+      expect(find.textContaining('No internet connection'), findsNothing);
+      expect(h.location, AppPaths.vendorHome);
+      expect(find.text('Your profile is under review'), findsOneWidget);
+    });
+
+    testWidgets('a submit that really failed still says so', (tester) async {
+      final h = await pumpVendor(
+        tester,
+        () => me('vendor_me_published', status: 'draft'),
+        overrides: {'POST /vendor/me/submit': lost},
+      );
+      h.go(AppPaths.vendorProfile);
+      await tester.pumpAndSettle();
+      await tap(tester, find.text('Submit for review'));
+      expect(find.textContaining('No internet connection'), findsOneWidget);
+      expect(h.location, AppPaths.vendorProfile);
+    });
+
+    testWidgets('a withdraw whose answer was lost is not reported as failed when the server did withdraw', (tester) async {
+      var withdrawn = false;
+      await pumpVendor(
+        tester,
+        () => throw StateError('unused'),
+        overrides: {
+          'GET /vendor/me': (_) => jsonBody(withdrawn ? me('vendor_me_draft') : me('vendor_submit')),
+          'POST /vendor/me/withdraw': (o) {
+            withdrawn = true;
+            return lost(o);
+          },
+        },
+      );
+      await tap(tester, find.text('Withdraw to edit'));
+      expect(find.textContaining('No internet connection'), findsNothing);
+      expect(find.text('Finish your profile'), findsOneWidget);
+    });
+  });
 }

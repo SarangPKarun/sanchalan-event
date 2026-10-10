@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/api_errors.dart';
 import '../../../core/config.dart';
 import '../../../core/link_launcher.dart';
 import '../../../core/router/paths.dart';
@@ -42,6 +43,11 @@ class _VendorDashboardPageState extends ConsumerState<VendorDashboardPage> {
       final me = await ref.read(vendorRepositoryProvider).withdraw();
       ref.read(vendorDataProvider.notifier).apply(me);
     } catch (e) {
+      // The answer may have been lost after the server finished: check the real state first.
+      if (isNetworkError(e)) {
+        await ref.read(vendorDataProvider.notifier).reload();
+        if (ref.read(vendorDataProvider).value?.vendor.status != VendorStatus.pendingReview) return;
+      }
       if (mounted) setState(() => _error = friendlyError(e, 'Could not withdraw your profile.'));
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -156,6 +162,12 @@ class VendorEditorPage extends ConsumerWidget {
         } catch (e) {
           final missing = missingFromError(e);
           if (missing.isNotEmpty) return stillNeededMessage(missing);
+          // On a flaky connection the server may have finished while the answer was lost.
+          // Look at the real state before reporting a failure.
+          if (isNetworkError(e)) {
+            await data.reload();
+            if (ref.read(vendorDataProvider).value?.vendor.status == VendorStatus.pendingReview) return null;
+          }
           return friendlyError(e, 'Could not submit your profile.');
         }
       },
