@@ -38,13 +38,13 @@ Step-by-step plan to move the Sanchalan mobile app from Expo / React Native to F
 
 ## 1. Pre-flight
 
-- [ ] Commit or discard the uncommitted changes on `apk-build` (`README.md`, `apps/admin/app.json`, `apps/admin/vercel.json`, `spec.md`).
-- [ ] Remove the plaintext admin password from `README.md` and rotate it.
-- [ ] Note that `apps/backend/src/lib/otp.ts` returns a fixed OTP (`123456`). Flutter testing relies on it locally; fix it before any real pilot.
-- [ ] Tag the last RN build: `git tag rn-final`.
-- [ ] Branch: `git checkout -b flutter-migration`.
+- [x] Commit or discard the uncommitted changes on `apk-build` (`README.md`, `apps/admin/app.json`, `apps/admin/vercel.json`, `spec.md`).
+- [x] Remove the plaintext admin password from `README.md` and rotate it.
+- [x] Note that `apps/backend/src/lib/otp.ts` returns a fixed OTP (`123456`). Flutter testing relies on it locally; fix it before any real pilot.
+- [x] Tag the last RN build: `git tag rn-final`.
+- [x] Branch: `git checkout -b flutter-migration`.
 - [ ] Install the Flutter SDK, Android SDK and a JDK. Run `flutter doctor` until clean.
-- [ ] Freeze the feature list. Use `spec.md` (screens section) as the parity checklist. No new RN features during migration.
+- [x] Freeze the feature list. Use `spec.md` (screens section) as the parity checklist. No new RN features during migration.
 - [ ] Start the backend locally: `docker compose up -d`, then run the backend. OTPs print to the console when `NODE_ENV` is not `production`.
 
 ## 2. Scaffold the Flutter project
