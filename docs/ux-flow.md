@@ -50,7 +50,7 @@ Not built (do not design): guests and RSVP, bookings, payments, reviews, documen
 | Event detail | `/event-home/:id` | event with tasks and budget, task categories |
 | Vendors | `/vendors` | `GET /vendors` with filters |
 | Vendor detail | `/vendors/:id` | `GET /vendors/:id` |
-| Vendor dashboard | `/vendor/home`, `/vendor/profile`, `/vendor/under-review`, `/vendor/suspended` | `GET /vendor/me` with completeness |
+| Vendor dashboard and editor | `/vendor/home` (every status), `/vendor/profile` | `GET /vendor/me` with completeness |
 
 ## Design principles
 
