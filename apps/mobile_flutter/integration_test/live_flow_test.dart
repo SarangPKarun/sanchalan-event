@@ -184,8 +184,11 @@ void main() {
     final before = allCount();
     await tapAndPump(tester, find.byType(TaskTile).first);
     await waitFor(tester, find.text('Task details'), 'task sheet');
-    await tapAndPump(tester, find.descendant(of: find.byType(BottomSheet), matching: find.text('Done')));
-    await tapAndPump(tester, find.text('Save changes'));
+    final doneChip = find.descendant(of: find.byType(BottomSheet), matching: find.text('Done'));
+    await waitFor(tester, doneChip, 'Done option');
+    await tapVisible(tester, doneChip);
+    await waitFor(tester, find.text('Save changes'), 'save button');
+    await tapVisible(tester, find.text('Save changes'));
     await waitFor(tester, find.text('Done (1)'), 'task marked done');
 
     // Add a task
@@ -202,7 +205,9 @@ void main() {
     // Budget: add a category
     await waitFor(tester, find.widgetWithText(Tab, 'Budget'), 'event tabs after the task was added');
     await tapAndPump(tester, find.widgetWithText(Tab, 'Budget'));
-    await waitFor(tester, find.text('Add category'), 'budget tab content');
+    await waitFor(tester, find.text('Categories'), 'budget tab content');
+    await tester.scrollUntilVisible(find.text('Add category'), 300, scrollable: find.byType(Scrollable).last);
+    await tester.pump(const Duration(milliseconds: 300));
     await tapAndPump(tester, find.text('Add category').first);
     await waitFor(tester, find.text('Add budget category'), 'budget sheet');
     await tapVisible(tester, find.text('Something else'));
@@ -211,7 +216,7 @@ void main() {
     await tester.enterText(sheetFields.last, '20000');
     await tester.pump(const Duration(milliseconds: 300));
     await tapVisible(tester, find.descendant(of: find.byType(BottomSheet), matching: find.text('Add category')));
-    await waitFor(tester, find.text('Return gifts'), 'new budget category');
+    await waitFor(tester, find.textContaining('9 categories'), 'new budget category');
 
     // Back to the list and sign out
     final nav = container(tester).read(routerProvider);
