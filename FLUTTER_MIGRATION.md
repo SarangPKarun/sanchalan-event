@@ -139,17 +139,19 @@ Rebuild the expo-router tree in `core/router.dart` with `go_router`. The `redire
 
 | Group | Routes |
 |---|---|
-| Auth | `/phone`, `/otp` |
-| Organizer | `/profile-setup`, `/events`, `/event-setup`, `/event-home/:id`, `/vendors`, `/vendors/:id` |
-| Vendor | `/vendor/profile`, `/vendor/home`, `/vendor/under-review`, `/vendor/suspended` |
+| Auth | `/welcome`, `/phone`, `/otp` |
+| Organizer tabs (bottom navigation) | `/home`, `/events`, `/vendors` (optional `?category=`), `/profile` |
+| Organizer full-screen | `/profile-setup`, `/profile-edit`, `/event-setup`, `/event-home/:id`, `/event-edit/:id`, `/vendors/:id` |
+| Vendor | `/vendor/home` (dashboard for every status), `/vendor/profile` (editor) |
+| Other | `/splash`, `/organizer/loading|error`, `/vendor/loading|error`, `/unsupported-role`, `/dev/*` (debug builds only) |
 
-Redirect rules:
-- Unauthenticated → `/phone`. Authenticated users on auth routes → their role's home.
-- Organizer without a profile → `/profile-setup`.
-- Vendor by status: `published` → home, `pending_review` → under-review, `suspended` → suspended, `draft` / `rejected` → profile.
+Redirect rules (final, after the design phase):
+- Unauthenticated: only `/welcome`, `/phone`, `/otp`; anything else goes to `/welcome`.
+- Organizer without a profile: only `/profile-setup`. With a profile: every organizer route; anything else goes to `/home`.
+- Vendor: every status lands on `/vendor/home`; `/vendor/profile` is open to draft, rejected and published vendors only, so a vendor whose live profile is sent back to review is moved off the editor automatically.
 - Re-evaluate on auth/vendor state changes (`refreshListenable`).
 
-**Status: done (guard logic final, screens are placeholders).**
+**Status: done (the first version used placeholders and flat routes; the table and rules above are the final ones, see Phase 7).**
 - `core/router/redirects.dart` is a pure `redirectFor(location, GuardState)` covering splash, unauthed, admin, organizer (loading, error, needs profile, ready) and each vendor status. `core/router/guard_state.dart` derives the state and only watches the data for the signed-in role. `core/router/router.dart` holds the route table and `OtpArgs`.
 - Extra routes beyond the table: `/splash`, `/organizer/loading|error`, `/vendor/loading|error` (spinner and Retry, as in the RN layouts) and `/unsupported-role` (an admin session on mobile can sign out instead of looping).
 - Routes are flat for now. The Phase 6D bottom navigation (`StatefulShellRoute`) is added in Phase 7 once the design is signed off.
@@ -250,28 +252,37 @@ Time-box this phase. Design only features that exist today; park anything else i
 Order by risk. For each screen: build the **revamped** UI from Phase 6, wire it to the Riverpod providers and the existing API, verify against the running backend, tick the checklist. The parity checklist is about **features**: every capability the RN app has must still be reachable, even though layouts change.
 
 **7.1 Auth**
-- [ ] Welcome
-- [ ] Phone: role cards, country-code picker (`countryCodes.ts` → Dart list), E.164 validation
-- [ ] OTP: six-box entry, resend, error states
+- [x] Welcome
+- [x] Phone: role cards, country-code picker (`countryCodes.ts` → Dart list), E.164 validation
+- [x] OTP: six-box entry, resend, error states
 
 **7.2 Organizer**
-- [ ] Shell with bottom navigation
-- [ ] Home tab (hero card, next up, budget snapshot, quick actions)
-- [ ] Profile setup
-- [ ] Events list (multiple events, cards)
-- [ ] Event setup
-- [ ] Event detail: budget categories add/edit/delete; roadmap generate / regenerate / restore; task modal; edit-event modal
-- [ ] Vendors list with filters
-- [ ] Vendor detail (read-only)
+- [x] Shell with bottom navigation
+- [x] Home tab (hero card, next up, budget snapshot, quick actions)
+- [x] Profile setup
+- [x] Events list (multiple events, cards)
+- [x] Event setup
+- [x] Event detail: budget categories add/edit/delete; roadmap generate / regenerate / restore; task modal; edit-event modal
+- [x] Vendors list with filters
+- [x] Vendor detail (read-only)
 
 **7.3 Vendor**
-- [ ] Dashboard for every status (draft, pending_review, published, rejected, suspended)
-- [ ] Profile editor + past-work modal (text only)
+- [x] Dashboard for every status (draft, pending_review, published, rejected, suspended)
+- [x] Profile editor + past-work modal (text only)
 
 **7.4 Shared**
-- [ ] `PastWorkModal`, `EditEventModal`, `RegenerateRoadmapModal` (bottom sheets / dialogs)
-- [ ] `CountryCodePicker`
+- [x] `PastWorkModal`, `EditEventModal`, `RegenerateRoadmapModal` (bottom sheets / dialogs)
+- [x] `CountryCodePicker`
 
+**Status: code done, live check pending.** Every approved screen is connected through a thin `*Page` widget that maps providers to the plain view (`features/auth/phone_page.dart`, `otp_page.dart`; `features/organizer/pages/*`; `features/vendor/pages/vendor_pages.dart`), so design changes stay cheap.
+- **Auth:** phone, OTP and resend with friendly messages from `auth_messages.dart` (bad number, rate limiting, wrong or expired code, no internet).
+- **Organizer:** after each change the right providers are reloaded; only changed fields are sent for tasks, budget categories, events and the vendor profile. A new event and the roadmap use the 90 s timeout and the waiting screen; the shell keeps each tab's state.
+- **Vendor:** the dashboard, withdraw, the editor (changed fields only, categories through their own call, past work, a live profile asks before going back to review) and submit with the server's "missing" list shown as "Still needed: ...".
+- **Platform:** `url_launcher` for Call, WhatsApp, links and Contact support (Android `<queries>` added); an offline banner with `connectivity_plus`. Support contact is set with `--dart-define=SUPPORT_EMAIL=... SUPPORT_PHONE=...` (placeholder email for now). Translations (ARB files) are intentionally not done yet.
+- 530 tests pass: connector tests use the recorded real responses and check the requests that are sent (method, path, body, timeouts), including error and confirmation paths.
+- Left: the end-to-end check on the phone against the real backend (below), then Phase 8 onwards.
+
+**Live check on the phone** (against a local backend on the Neon database in `apps/backend/.env`, phone reaching it with `adb reverse tcp:3000 tcp:3000`): see the results recorded here once done.
 ## 8. Platform configuration
 
 - [ ] App name "Sanchalan", launcher icon (`flutter_launcher_icons`) and native splash (`flutter_native_splash`) from `apps/mobile/assets`, restyled to match the new brand.

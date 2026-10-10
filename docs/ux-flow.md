@@ -40,7 +40,7 @@ Not built (do not design): guests and RSVP, bookings, payments, reviews, documen
 
 | Screen | Route | Data it needs |
 |---|---|---|
-| Welcome | `/welcome` (new) | none |
+| Welcome | `/welcome` | none |
 | Phone | `/phone` | role, country, number; `POST /auth/otp/request` |
 | OTP | `/otp` | phone, role; `POST /auth/otp/verify`, resend |
 | Profile setup | `/profile-setup` | `POST /organizers/me/profile` |
