@@ -126,6 +126,13 @@ Map each React Context to Riverpod:
 
 Behavior to keep: if a stored session has **no role**, force re-login (commit `78cfde3`).
 
+**Status: done (code and tests, no UI yet).**
+- `features/auth/auth_controller.dart` (`authControllerProvider`) ports the session restore, sign-in and sign-out rules, including the no-role re-login. The router in Phase 5 redirects from it. The API client signals a dead session through `sessionExpiredProvider`, so it has no dependency on the auth layer.
+- `features/organizer/organizer_providers.dart` (`organizerDataProvider` with `refetch()` and a silent `reloadEvents()`, plus per-event providers) and `features/vendor/vendor_providers.dart` (`vendorDataProvider` with `refetch()` and `apply()`, plus directory providers).
+- One typed repository per area (`auth_`, `organizer_`, `vendor_repository.dart`) so screens never build URLs. Event creation and roadmap generation keep the 90 s timeout the RN app used.
+- Riverpod 3 retries failed providers automatically; the data providers turn that off so a failure shows an error with a Retry button, as in the RN app.
+- 95 tests pass, covering every restore branch and each call's method, path, query and body.
+
 ## 5. Routing and guards
 
 Rebuild the expo-router tree in `core/router.dart` with `go_router`. The `redirect` callback replaces `Stack.Protected`.

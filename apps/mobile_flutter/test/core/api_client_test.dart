@@ -1,42 +1,10 @@
-import 'dart:convert';
-import 'dart:typed_data';
-
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sanchalan/core/api_client.dart';
 import 'package:sanchalan/core/auth_storage.dart';
 
-typedef Handler = Future<ResponseBody> Function(RequestOptions options);
-
-class FakeAdapter implements HttpClientAdapter {
-  FakeAdapter(this.handler);
-  final Handler handler;
-  final requests = <RequestOptions>[];
-
-  @override
-  Future<ResponseBody> fetch(
-    RequestOptions options,
-    Stream<Uint8List>? requestStream,
-    Future<void>? cancelFuture,
-  ) {
-    requests.add(options);
-    return handler(options);
-  }
-
-  @override
-  void close({bool force = false}) {}
-
-  int count(String path) => requests.where((r) => r.path == path).length;
-}
-
-ResponseBody jsonBody(Object body, int status) => ResponseBody.fromString(
-      jsonEncode(body),
-      status,
-      headers: {
-        Headers.contentTypeHeader: ['application/json'],
-      },
-    );
+import '../helpers/fake_adapter.dart';
 
 void main() {
   late AuthStorage storage;
