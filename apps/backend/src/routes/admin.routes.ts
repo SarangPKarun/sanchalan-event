@@ -36,6 +36,19 @@ import {
   updateCategoryHandler,
   updateTemplateHandler,
 } from "../controllers/admin-catalog.controller.js";
+import {
+  auditCsvHandler,
+  getEventHandler,
+  getOrganizerHandler,
+  getRoadmapLogHandler,
+  listAuditHandler,
+  listEventsHandler,
+  listOrganizersHandler,
+  listRoadmapLogsHandler,
+  suspendOrganizerHandler,
+  taskEditStatsHandler,
+  unsuspendOrganizerHandler,
+} from "../controllers/admin-oversight.controller.js";
 
 export const adminRouter: RouterType = Router();
 
@@ -102,3 +115,16 @@ adminRouter.post("/task-templates", catalogEditors, createTemplateHandler);
 adminRouter.patch("/task-templates/:id", catalogEditors, updateTemplateHandler);
 adminRouter.delete("/task-templates/:id", catalogEditors, deleteTemplateHandler);
 adminRouter.post("/category-proposals/:id/draft-templates", catalogEditors, draftTemplatesHandler);
+
+// Oversight: read-only for every admin role; suspending an organizer and the audit log are super-admin only.
+adminRouter.get("/organizers", listOrganizersHandler);
+adminRouter.get("/organizers/:id", getOrganizerHandler);
+adminRouter.post("/organizers/:id/suspend", requireAdminRole("super_admin"), suspendOrganizerHandler);
+adminRouter.post("/organizers/:id/unsuspend", requireAdminRole("super_admin"), unsuspendOrganizerHandler);
+adminRouter.get("/events", listEventsHandler);
+adminRouter.get("/events/:id", getEventHandler);
+adminRouter.get("/roadmap-logs", listRoadmapLogsHandler);
+adminRouter.get("/roadmap-logs/:id", getRoadmapLogHandler);
+adminRouter.get("/task-edit-stats", taskEditStatsHandler);
+adminRouter.get("/audit-logs", requireAdminRole("super_admin"), listAuditHandler);
+adminRouter.get("/audit-logs.csv", requireAdminRole("super_admin"), auditCsvHandler);

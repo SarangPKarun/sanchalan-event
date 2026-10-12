@@ -3,7 +3,7 @@ import type { EventGroup, TaskCategory, Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../lib/errors.js";
 import { toDateOnly } from "../lib/serialize.js";
-import { generateCompletion } from "../lib/llm.js";
+import { generateCompletionDetailed } from "../lib/llm.js";
 import { env } from "../lib/env.js";
 import {
   validateRoadmapOutput,
@@ -84,6 +84,34 @@ export function buildRoadmapPrompt(
   return { systemPrompt, userPrompt };
 }
 
+/** What the log keeps about the model calls behind one generation. */
+export interface LlmMeta {
+  latencyMs?: number;
+  attempts?: number;
+  inputTokens?: number;
+  outputTokens?: number;
+}
+
+/** Wraps the LLM call to total up latency, attempts, tokens and raw replies for the generation log. */
+function meterLlm() {
+  const meta = { latencyMs: 0, attempts: 0, inputTokens: 0, outputTokens: 0 };
+  const raws: string[] = [];
+  const call = async (system: string, user: string): Promise<string> => {
+    const started = Date.now();
+    meta.attempts += 1;
+    try {
+      const { text, usage } = await generateCompletionDetailed(system, user);
+      raws.push(text);
+      meta.inputTokens += usage.inputTokens ?? 0;
+      meta.outputTokens += usage.outputTokens ?? 0;
+      return text;
+    } finally {
+      meta.latencyMs += Date.now() - started;
+    }
+  };
+  return { call, meta, raws };
+}
+
 export async function generateAndValidateRoadmap(
   callLLM: (system: string, user: string) => Promise<string>,
   systemPrompt: string,
@@ -113,7 +141,8 @@ export async function createRoadmapInTransaction(
   templates: TemplateForPrompt[],
   templateIdsUsed: string[],
   inputParams: Record<string, unknown>,
-  replace: { taskIds: string[]; changedBy: string } = { taskIds: [], changedBy: "" }
+  replace: { taskIds: string[]; changedBy: string } = { taskIds: [], changedBy: "" },
+  llmMeta: LlmMeta = {}
 ) {
   const templateByKey = new Map(templates.map((t) => [t.taskKey, t]));
   const taskKeyToId = new Map(items.map((item) => [item.taskKey, randomUUID()]));
@@ -187,6 +216,7 @@ export async function createRoadmapInTransaction(
         templateIdsUsed,
         llmModelUsed: env.LLM_MODEL,
         rawOutput: { tasks: items } as Prisma.InputJsonValue,
+        ...llmMeta,
       },
     });
 
@@ -279,13 +309,39 @@ export async function generateRoadmap(
 
   const { systemPrompt, userPrompt } = buildRoadmapPrompt(eventGroup, templates, plan.keptNames);
 
-  const { tasks: generated } = await generateAndValidateRoadmap(
-    generateCompletion,
-    systemPrompt,
-    userPrompt,
-    knownTaskKeys,
-    knownCategoryKeys
-  );
+  const metered = meterLlm();
+  let generated: RoadmapItem[];
+  try {
+    ({ tasks: generated } = await generateAndValidateRoadmap(
+      metered.call,
+      systemPrompt,
+      userPrompt,
+      knownTaskKeys,
+      knownCategoryKeys
+    ));
+  } catch (err) {
+    // Keep failed attempts so a human can see what the model returned and why it was rejected.
+    await prisma.roadmapGenerationLog
+      .create({
+        data: {
+          eventGroupId,
+          inputParams: {
+            eventType: eventGroup.eventType,
+            region: eventGroup.region,
+            budgetTier: eventGroup.budgetTier,
+            guestCountEstimate: eventGroup.guestCountEstimate,
+          },
+          templateIdsUsed: [],
+          llmModelUsed: env.LLM_MODEL,
+          rawOutput: { attempts: metered.raws } as Prisma.InputJsonValue,
+          status: "failed",
+          error: (err instanceof AppError && err.details ? `${err.message}: ${JSON.stringify(err.details)}` : String(err instanceof Error ? err.message : err)).slice(0, 2000),
+          ...metered.meta,
+        },
+      })
+      .catch(() => {});
+    throw err;
+  }
 
   // Kept tasks carry no template key, so duplicates are caught by name as a backstop
   // to the prompt instruction. Drop dependencies that pointed at a filtered-out task.
@@ -324,7 +380,8 @@ export async function generateRoadmap(
     templates,
     usedTemplateIds,
     { ...inputParams, ...(mode ? { regenerationMode: mode } : {}) },
-    { taskIds: plan.removeIds, changedBy: organizerId }
+    { taskIds: plan.removeIds, changedBy: organizerId },
+    metered.meta
   );
 
   return { tasks, removedTaskCount: plan.removeIds.length };

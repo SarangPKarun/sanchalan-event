@@ -633,19 +633,32 @@ model TaskEditLog {
   @@map("task_edit_logs")
 }
 
-/// [ACTIVE, write-only in Phase 1] Logs the actual AI call — input params,
+enum RoadmapGenerationStatus {
+  success
+  failed
+}
+
+/// [ACTIVE] Logs the actual AI call — input params,
 /// which templates were selected, which LLM/model version, and raw output.
 model RoadmapGenerationLog {
-  id              String   @id @default(uuid()) @db.Uuid
-  eventGroupId    String   @map("event_group_id") @db.Uuid
-  inputParams     Json     @map("input_params")
-  templateIdsUsed String[] @map("template_ids_used")
-  llmModelUsed    String   @map("llm_model_used")
-  rawOutput       Json     @map("raw_output")
-  createdAt       DateTime @default(now()) @map("created_at")
+  id              String                  @id @default(uuid()) @db.Uuid
+  eventGroupId    String                  @map("event_group_id") @db.Uuid
+  inputParams     Json                    @map("input_params")
+  templateIdsUsed String[]                @map("template_ids_used")
+  llmModelUsed    String                  @map("llm_model_used")
+  rawOutput       Json?                   @map("raw_output")
+  status          RoadmapGenerationStatus @default(success)
+  error           String?
+  latencyMs       Int?                    @map("latency_ms")
+  attempts        Int?
+  inputTokens     Int?                    @map("input_tokens")
+  outputTokens    Int?                    @map("output_tokens")
+  createdAt       DateTime                @default(now()) @map("created_at")
 
   eventGroup EventGroup @relation(fields: [eventGroupId], references: [id])
 
+  @@index([createdAt])
+  @@index([status, createdAt])
   @@map("roadmap_generation_logs")
 }
 

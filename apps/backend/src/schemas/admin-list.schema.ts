@@ -54,3 +54,28 @@ export const updateTemplateSchema = templateBodySchema.omit({ eventType: true })
 export const keyParamSchema = z.object({ key: z.string().min(1).max(60) });
 export const idParamSchema = z.object({ id: z.string().uuid() });
 export const templatesQuerySchema = z.object({ category: z.string().max(60).optional() });
+
+export const listOrganizersQuerySchema = z.object({
+  status: z.enum(["active", "suspended"]).optional(),
+  ...pageQuery,
+});
+export const listEventsQuerySchema = z.object({
+  status: z.enum(["planning", "active", "completed", "archived"]).optional(),
+  eventType: eventType.optional(),
+  ...pageQuery,
+});
+export const listRoadmapLogsQuerySchema = z.object({
+  status: z.enum(["success", "failed"]).optional(),
+  page: pageQuery.page,
+  pageSize: pageQuery.pageSize,
+});
+export const auditQuerySchema = z.object({
+  adminId: z.string().uuid().optional(),
+  action: z.string().max(80).optional(),
+  entityType: z.string().max(60).optional(),
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
+  page: pageQuery.page,
+  pageSize: pageQuery.pageSize,
+});
+export const suspendOrganizerSchema = z.object({ reason: z.string().trim().min(1).max(1000) });

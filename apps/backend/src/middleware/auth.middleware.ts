@@ -69,3 +69,21 @@ export async function requireActiveAdmin(req: Request, res: Response, next: Next
     next(err);
   }
 }
+
+/** For organizer routes: a suspended organizer is blocked at once, not when the access token expires. */
+export async function requireActiveOrganizer(req: Request, res: Response, next: NextFunction) {
+  if (req.auth?.role !== "organizer") return next();
+  try {
+    const organizer = await prisma.organizer.findUnique({
+      where: { id: req.auth.userId },
+      select: { status: true },
+    });
+    if (organizer?.status === "suspended") {
+      res.status(403).json({ error: "Your account is suspended. Contact support.", code: "account_suspended" });
+      return;
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+}

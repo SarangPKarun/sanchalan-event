@@ -1,5 +1,5 @@
 import { Router, type Router as RouterType } from "express";
-import { requireAuth, requireRole } from "../middleware/auth.middleware.js";
+import { requireActiveOrganizer, requireAuth, requireRole } from "../middleware/auth.middleware.js";
 import {
   createEventGroupHandler,
   listMyEventGroupsHandler,
@@ -14,7 +14,7 @@ import { generateRoadmapHandler } from "../controllers/roadmap.controller.js";
 import { createTaskHandler, listEventGroupTasksHandler } from "../controllers/task.controller.js";
 
 export const eventGroupRouter: RouterType = Router();
-eventGroupRouter.use(requireAuth, requireRole("organizer"));
+eventGroupRouter.use(requireAuth, requireRole("organizer"), requireActiveOrganizer);
 
 eventGroupRouter.post("/", createEventGroupHandler);
 eventGroupRouter.get("/me", listMyEventGroupsHandler); // MUST precede /:id

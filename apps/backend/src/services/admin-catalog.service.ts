@@ -240,18 +240,37 @@ export async function draftTemplates(proposalId: string) {
 // ── Dashboard counts ───────────────────────────────────────────────────────
 
 export async function stats() {
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const [vendorRows, proposalRows, organizers, events, roadmapsWeek, roadmapsTotal] = await Promise.all([
-    prisma.vendor.groupBy({ by: ["status"], _count: true }),
-    prisma.categoryProposal.groupBy({ by: ["status"], _count: true }),
-    prisma.organizer.count(),
-    prisma.eventGroup.count(),
-    prisma.roadmapGenerationLog.count({ where: { createdAt: { gte: weekAgo } } }),
-    prisma.roadmapGenerationLog.count(),
-  ]);
+  const day = 24 * 60 * 60 * 1000;
+  const weekAgo = new Date(Date.now() - 7 * day);
+  const monthAgo = new Date(Date.now() - 30 * day);
+  const [vendorRows, proposalRows, organizers, events, roadmapsWeek, roadmapsTotal, failedWeek, tokens, oldestVendor, oldestProposal] =
+    await Promise.all([
+      prisma.vendor.groupBy({ by: ["status"], _count: true }),
+      prisma.categoryProposal.groupBy({ by: ["status"], _count: true }),
+      prisma.organizer.count(),
+      prisma.eventGroup.count(),
+      prisma.roadmapGenerationLog.count({ where: { createdAt: { gte: weekAgo }, status: "success" } }),
+      prisma.roadmapGenerationLog.count({ where: { status: "success" } }),
+      prisma.roadmapGenerationLog.count({ where: { createdAt: { gte: weekAgo }, status: "failed" } }),
+      prisma.roadmapGenerationLog.aggregate({ where: { createdAt: { gte: monthAgo } }, _sum: { inputTokens: true, outputTokens: true } }),
+      prisma.vendor.findFirst({ where: { status: "pending_review" }, orderBy: { submittedAt: "asc" }, select: { id: true, businessName: true, submittedAt: true } }),
+      prisma.categoryProposal.findFirst({ where: { status: "pending" }, orderBy: { submittedAt: "asc" }, select: { id: true, label: true, submittedAt: true } }),
+    ]);
   const vendors = { draft: 0, pending_review: 0, published: 0, rejected: 0, suspended: 0 };
   for (const r of vendorRows) vendors[r.status] = r._count;
   const proposals = { pending: 0, approved: 0, rejected: 0, merged: 0 };
   for (const r of proposalRows) proposals[r.status] = r._count;
-  return { vendors, proposals, organizers, events, roadmaps: { lastSevenDays: roadmapsWeek, total: roadmapsTotal } };
+  return {
+    vendors,
+    proposals,
+    organizers,
+    events,
+    roadmaps: {
+      lastSevenDays: roadmapsWeek,
+      total: roadmapsTotal,
+      failedLastSevenDays: failedWeek,
+      tokensLastThirtyDays: { input: tokens._sum.inputTokens ?? 0, output: tokens._sum.outputTokens ?? 0 },
+    },
+    oldestPending: { vendor: oldestVendor, proposal: oldestProposal },
+  };
 }

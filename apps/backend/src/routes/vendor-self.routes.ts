@@ -1,5 +1,5 @@
 import { Router, type Router as RouterType } from "express";
-import { requireAuth, requireRole } from "../middleware/auth.middleware.js";
+import { requireActiveOrganizer, requireAuth, requireRole } from "../middleware/auth.middleware.js";
 import {
   addPastWorkHandler,
   deletePastWorkHandler,
@@ -33,5 +33,5 @@ vendorSelfRouter.post("/submit", submitHandler);
 vendorSelfRouter.post("/withdraw", withdrawHandler);
 
 export const vendorCategoryRouter: RouterType = Router();
-vendorCategoryRouter.use(requireAuth, requireRole("organizer", "vendor"));
+vendorCategoryRouter.use(requireAuth, requireRole("organizer", "vendor"), requireActiveOrganizer);
 vendorCategoryRouter.get("/", listVendorCategoriesHandler);

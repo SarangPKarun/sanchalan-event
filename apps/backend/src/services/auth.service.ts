@@ -72,6 +72,7 @@ export async function verifyOtp(phoneNumber: string, otp: string, role: AuthRole
   await prisma.otpRequest.update({ where: { id: otpRow.id }, data: { consumedAt: new Date() } });
 
   const userId = await findOrCreateUser(phoneNumber, role);
+  if (role === "organizer") await assertOrganizerActive(userId);
 
   const accessToken = signAccessToken({ sub: userId, role });
   const { token: refreshToken, jti } = signRefreshToken({ sub: userId, role });
@@ -83,6 +84,11 @@ export async function verifyOtp(phoneNumber: string, otp: string, role: AuthRole
   });
 
   return { accessToken, refreshToken, role, userId };
+}
+
+async function assertOrganizerActive(organizerId: string) {
+  const o = await prisma.organizer.findUnique({ where: { id: organizerId }, select: { status: true } });
+  if (o?.status === "suspended") throw new AppError(403, "Your account is suspended. Contact support.");
 }
 
 async function findOrCreateUser(phoneNumber: string, role: AuthRole): Promise<string> {
@@ -119,6 +125,10 @@ export async function refreshAccessToken(refreshToken: string) {
   if (!matches) throw new AppError(401, "Invalid refresh token");
 
   const role = row.role as AuthRole;
+  if (role === "organizer") {
+    const o = await prisma.organizer.findUnique({ where: { id: row.userId }, select: { status: true } });
+    if (!o || o.status === "suspended") throw new AppError(401, "Refresh token revoked or expired");
+  }
   let adminRole: AdminRole | undefined;
   if (role === "admin") {
     const admin = await prisma.admin.findUnique({ where: { id: row.userId } });

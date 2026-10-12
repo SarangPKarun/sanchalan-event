@@ -1,6 +1,16 @@
 import { env } from "./env.js";
 
-export async function generateCompletion(systemPrompt: string, userPrompt: string): Promise<string> {
+export interface LlmUsage {
+  inputTokens?: number | undefined;
+  outputTokens?: number | undefined;
+}
+export interface LlmResult {
+  text: string;
+  usage: LlmUsage;
+}
+
+/** Same call as generateCompletion, plus the token usage the provider reported. */
+export async function generateCompletionDetailed(systemPrompt: string, userPrompt: string): Promise<LlmResult> {
   switch (env.LLM_PROVIDER) {
     case "anthropic":
       return callAnthropic(systemPrompt, userPrompt);
@@ -11,12 +21,16 @@ export async function generateCompletion(systemPrompt: string, userPrompt: strin
   }
 }
 
+export async function generateCompletion(systemPrompt: string, userPrompt: string): Promise<string> {
+  return (await generateCompletionDetailed(systemPrompt, userPrompt)).text;
+}
+
 interface AnthropicContentBlock {
   type: string;
   text?: string;
 }
 
-async function callAnthropic(system: string, user: string): Promise<string> {
+async function callAnthropic(system: string, user: string): Promise<LlmResult> {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -46,14 +60,14 @@ async function callAnthropic(system: string, user: string): Promise<string> {
   if (!textBlock?.text) {
     throw new Error("Anthropic response had no text block.");
   }
-  return textBlock.text;
+  return { text: textBlock.text, usage: { inputTokens: data.usage?.input_tokens, outputTokens: data.usage?.output_tokens } };
 }
 
 // Targets chat-completions-family models (gpt-4o-style). A newer
 // reasoning-tier LLM_MODEL may not accept `response_format`/plain
 // `role: "system"` the same way — this adapter isn't guaranteed uniform
 // across every OpenAI model id.
-async function callOpenAI(system: string, user: string): Promise<string> {
+async function callOpenAI(system: string, user: string): Promise<LlmResult> {
   const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -82,10 +96,10 @@ async function callOpenAI(system: string, user: string): Promise<string> {
   if (!text) {
     throw new Error("OpenAI response had no content.");
   }
-  return text;
+  return { text, usage: { inputTokens: data.usage?.prompt_tokens, outputTokens: data.usage?.completion_tokens } };
 }
 
-async function callGemini(system: string, user: string): Promise<string> {
+async function callGemini(system: string, user: string): Promise<LlmResult> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${env.LLM_MODEL}:generateContent?key=${env.LLM_API_KEY}`;
   const res = await fetch(url, {
     method: "POST",
@@ -110,5 +124,5 @@ async function callGemini(system: string, user: string): Promise<string> {
   if (!text) {
     throw new Error("Gemini response had no text.");
   }
-  return text;
+  return { text, usage: { inputTokens: data.usageMetadata?.promptTokenCount, outputTokens: data.usageMetadata?.candidatesTokenCount } };
 }
