@@ -13,8 +13,10 @@ suite("database-backed admin services", () => {
   let team: typeof import("../services/admin-team.service.js");
   let auth: typeof import("../services/admin-auth.service.js");
   let catalog: typeof import("../services/admin-catalog.service.js");
+  let oversight: typeof import("../services/admin-oversight.service.js");
   let superId: string;
   const vendorIds: string[] = [];
+  const organizerIds: string[] = [];
 
   beforeAll(async () => {
     ({ prisma } = await import("../lib/prisma.js"));
@@ -22,6 +24,7 @@ suite("database-backed admin services", () => {
     team = await import("../services/admin-team.service.js");
     auth = await import("../services/admin-auth.service.js");
     catalog = await import("../services/admin-catalog.service.js");
+    oversight = await import("../services/admin-oversight.service.js");
     const { hashPassword } = await import("../lib/hash.js");
     const admin = await prisma.admin.create({
       data: { name: "T", email: `${run}-super@test.dev`, passwordHash: await hashPassword("correct-horse-battery"), role: "super_admin" },
@@ -40,6 +43,8 @@ suite("database-backed admin services", () => {
     await prisma.vendorCategory.deleteMany({ where: { categoryKey: { startsWith: `t${run}` } } });
     await prisma.taskCategory.deleteMany({ where: { categoryKey: { startsWith: `t${run}` } } });
     await prisma.vendor.deleteMany({ where: { id: { in: vendorIds } } });
+    await prisma.refreshToken.deleteMany({ where: { userId: { in: organizerIds } } });
+    await prisma.organizer.deleteMany({ where: { id: { in: organizerIds } } });
     await prisma.admin.deleteMany({ where: { email: { contains: run } } });
     await prisma.$disconnect();
   });
@@ -99,5 +104,33 @@ suite("database-backed admin services", () => {
     await expect(catalog.deleteTemplate(superId, a.id)).rejects.toMatchObject({ status: 409 });
     await catalog.deleteTemplate(superId, b.id);
     await catalog.deleteTemplate(superId, a.id);
+  });
+
+  it("suspends and restores an organizer once, revoking their sessions", async () => {
+    const o = await prisma.organizer.create({ data: { phoneNumber: `+91${run}77`, status: "active" } });
+    organizerIds.push(o.id);
+    await prisma.refreshToken.create({
+      data: { id: crypto.randomUUID(), tokenHash: "x", userId: o.id, role: "organizer", expiresAt: new Date(Date.now() + 1e9) },
+    });
+
+    await expect(oversight.setOrganizerStatus(superId, o.id, "active")).rejects.toMatchObject({ status: 409 });
+    const suspended = await oversight.setOrganizerStatus(superId, o.id, "suspended", "Abuse");
+    expect(suspended.status).toBe("suspended");
+    expect(await prisma.refreshToken.count({ where: { userId: o.id, revokedAt: null } })).toBe(0);
+    await expect(oversight.setOrganizerStatus(superId, o.id, "suspended", "again")).rejects.toMatchObject({ status: 409 });
+
+    const detail = await oversight.getOrganizer(o.id);
+    expect(detail.suspension?.metadata).toEqual({ reason: "Abuse" });
+    expect((await oversight.setOrganizerStatus(superId, o.id, "active")).status).toBe("active");
+  });
+
+  it("neutralises spreadsheet formulas in the audit CSV export", async () => {
+    await prisma.adminAuditLog.create({
+      data: { adminId: superId, action: "=HYPERLINK(\"http://evil\")", entityType: "vendor", entityId: `${run}-csv` },
+    });
+    const csv = await oversight.auditCsv({ entityType: "vendor", page: 1, pageSize: 20 });
+    const line = csv.split("\n").find((l) => l.includes(`${run}-csv`))!;
+    expect(line).toContain(`"'=HYPERLINK(`);
+    expect(line).not.toContain(`,"=HYPERLINK`);
   });
 });

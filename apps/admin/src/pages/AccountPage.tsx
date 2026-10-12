@@ -36,7 +36,7 @@ export function AccountPage() {
       setNext("");
       setConfirm("");
       toast.success("Password changed. Other sessions were signed out.");
-      if (forced) navigate("/vendors", { replace: true });
+      if (forced) navigate("/", { replace: true });
     } catch (err) {
       setError(errorMessage(err, "Could not change the password."));
     } finally {

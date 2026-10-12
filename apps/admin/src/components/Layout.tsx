@@ -2,10 +2,15 @@ import { Navigate, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../lib/auth-context.tsx";
 import { roleLabel } from "../lib/format.ts";
 
-const NAV = [
+const NAV: { to: string; label: string; end?: boolean; needs?: "team.manage" | "audit.read" }[] = [
+  { to: "/", label: "Dashboard", end: true },
   { to: "/vendors", label: "Vendors" },
   { to: "/categories", label: "Categories" },
-  { to: "/team", label: "Team", needs: "team.manage" as const },
+  { to: "/families", label: "Families" },
+  { to: "/events", label: "Events" },
+  { to: "/roadmap", label: "Roadmap" },
+  { to: "/audit", label: "Audit", needs: "audit.read" },
+  { to: "/team", label: "Team", needs: "team.manage" },
   { to: "/account", label: "Account" },
 ];
 
@@ -36,7 +41,7 @@ export function Layout() {
         {!admin.mustChangePassword && (
           <nav aria-label="Main">
             {NAV.filter((n) => !n.needs || can(n.needs)).map((n) => (
-              <NavLink key={n.to} to={n.to} className={({ isActive }) => (isActive ? "nav-link nav-active" : "nav-link")}>
+              <NavLink key={n.to} to={n.to} end={n.end ?? false} className={({ isActive }) => (isActive ? "nav-link nav-active" : "nav-link")}>
                 {n.label}
               </NavLink>
             ))}

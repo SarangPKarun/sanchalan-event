@@ -15,7 +15,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  if (state === "authed") return <Navigate to="/vendors" replace />;
+  if (state === "authed") return <Navigate to="/" replace />;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -24,7 +24,7 @@ export function LoginPage() {
     try {
       const { data } = await api.post<AuthTokens>("/admin/auth/login", { email, password });
       await signIn(data);
-      navigate("/vendors", { replace: true });
+      navigate("/", { replace: true });
     } catch (err) {
       const status = axios.isAxiosError(err) ? err.response?.status : undefined;
       if (status === 401) setError("Invalid email or password.");

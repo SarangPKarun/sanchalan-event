@@ -191,6 +191,7 @@ All routes require a bearer token except `/auth/*` and `/admin/auth/login`. Ther
 - Shared: SecureStore session, an axios client, and organizer and vendor contexts.
 
 ### Admin web (`apps/admin/src`)
+- `/`: dashboard. `/families`, `/events`, `/roadmap`, `/audit` and their detail pages are described under "Admin oversight".
 - `/login`: email and password. Five wrong passwords lock the account for 15 minutes (429), with a per-IP limit on top.
 - Everything else sits inside a shell (`components/Layout.tsx`) with the admin's name and role, role-aware navigation, skip link and logout. Unknown paths show a 404 page.
 - `/vendors`: queue with tabs (with counts) for pending review, published, rejected, suspended and drafts. Search, category, tier and sort filters and pagination are all kept in the URL. Reviewers can select several pending vendors and approve or reject them together; each is decided on its own and failures are reported.
@@ -198,6 +199,13 @@ All routes require a bearer token except `/auth/*` and `/admin/auth/login`. Ther
 - `/categories`: all categories with vendor and starter-task counts; retire or restore a category. `/categories/:key` edits the display name and event types and manages the category's starter tasks (add, edit, delete). `/categories/proposals`: the proposal queue (approve with starter tasks, optionally drafted by AI; merge with a preview; reject).
 - `/team` (super admin): add admins, change roles, disable/enable, reset passwords (a temporary password is shown once).
 - `/account`: change password, log out everywhere. A temporary password forces this page first.
+
+### Admin oversight
+- Dashboard (`/`): queues that need action with the age of the oldest item, platform counts, failed roadmaps in the last 7 days, AI token use over 30 days, and (super admin) recent activity.
+- Families: `GET /admin/organizers`, `/:id`; suspend and restore are super-admin only and need a reason (kept in the audit log). A suspended organizer cannot sign in or refresh, and is blocked on every organizer route straight away, even with a valid access token.
+- Events: `GET /admin/events`, `/:id` (sub-events, tasks, budget, AI generations). Read-only.
+- Roadmap: `GET /admin/roadmap-logs`, `/:id` and `GET /admin/task-edit-stats`. Each generation records status, attempts, latency and tokens; failed generations are kept with the model's replies and the validation error. The feedback tab shows which template tasks families edit or remove most.
+- Audit log (super admin): `GET /admin/audit-logs` with filters, and `GET /admin/audit-logs.csv`, which prefixes cells starting with `=`, `+`, `-` or `@` so spreadsheets do not run them.
 
 ### Admin catalog
 - `GET /admin/vendors` takes `status`, `q`, `category`, `priceTier`, `sort`, `page`, `pageSize` and returns `{vendors, total, page, pageSize}`; `GET /admin/category-proposals` takes `status`, `q`, `page`. `POST /admin/vendors/bulk` approves or rejects up to 50 vendors. `GET /admin/stats` returns counts.
