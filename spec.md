@@ -191,10 +191,20 @@ All routes require a bearer token except `/auth/*` and `/admin/auth/login`. Ther
 - Shared: SecureStore session, an axios client, and organizer and vendor contexts.
 
 ### Admin web (`apps/admin/src`)
-- `/login`
-- `/vendors`: queue with tabs for pending review, published, rejected, suspended and drafts.
-- `/vendors/:id`: detail with approve, reject (with reason), suspend and unsuspend.
-- Any other path redirects to `/vendors`. Routes are guarded by `ProtectedLayout`.
+- `/login`: email and password. Five wrong passwords lock the account for 15 minutes (429), with a per-IP limit on top.
+- Everything else sits inside a shell (`components/Layout.tsx`) with the admin's name and role, role-aware navigation, skip link and logout. Unknown paths show a 404 page.
+- `/vendors`: queue with tabs for pending review, published, rejected, suspended and drafts (the tab is kept in the URL).
+- `/vendors/:id`: detail with approve, reject (reason), suspend (reason) and unsuspend, each behind a confirmation dialog. Support admins see no action buttons.
+- `/categories`: category proposal queue (approve with starter tasks, merge, reject).
+- `/team` (super admin): add admins, change roles, disable/enable, reset passwords (a temporary password is shown once).
+- `/account`: change password, log out everywhere. A temporary password forces this page first.
+
+### Admin accounts and security
+- `GET /admin/me`, `POST /admin/me/password`, `POST /admin/me/logout-all`; `GET/POST /admin/admins`, `PATCH /admin/admins/:id`, `POST /admin/admins/:id/reset-password` (super admin only).
+- The admin's status and role are re-read on every admin request, so disabling or demoting takes effect immediately. A disabled admin's refresh tokens are revoked.
+- You cannot disable or demote yourself or the last active super admin.
+- `admin_audit_logs` records logins, failed logins, lockouts, vendor and proposal decisions and team changes. There is no screen for it yet.
+- The API sends helmet headers, limits JSON bodies to 100 kB and exposes `GET /health`. In production `ADMIN_APP_ORIGIN` must be set.
 
 ## 8. Configuration & local setup
 

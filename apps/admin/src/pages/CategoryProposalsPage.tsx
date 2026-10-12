@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { vendorCategoryLabel } from "@sanchalan/shared-types";
 import { api } from "../lib/api.ts";
+import { useAuth } from "../lib/auth-context.tsx";
+import { errorMessage as apiError, formatDate } from "../lib/format.ts";
+import { useToast } from "../lib/toast.tsx";
+import { Tabs } from "../components/Tabs.tsx";
+import { ErrorRetry } from "../components/ErrorRetry.tsx";
+import { StatusBadge } from "../components/StatusBadge.tsx";
+import { usePageTitle } from "../components/usePageTitle.ts";
 
 type Status = "pending" | "approved" | "rejected" | "merged";
 
@@ -36,10 +43,6 @@ const TABS: { label: string; value: Status }[] = [
   { label: "Rejected", value: "rejected" },
 ];
 
-function errorMessage(err: unknown, fallback: string): string {
-  return (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? fallback;
-}
-
 function blankTemplate(key: string): TemplateDraft {
   return { taskKey: `book_${key}`, defaultNameEn: "", defaultLeadTimeDays: "60" };
 }
@@ -53,6 +56,9 @@ function ProposalCard({
   categories: Category[];
   onDone: () => void;
 }) {
+  const { can } = useAuth();
+  const toast = useToast();
+  const canReview = can("category.review");
   const [mode, setMode] = useState<"approve" | "reject" | "merge" | null>(null);
   const [label, setLabel] = useState(proposal.label);
   const [templates, setTemplates] = useState<TemplateDraft[]>([blankTemplate(proposal.categoryKey)]);
@@ -66,9 +72,10 @@ function ProposalCard({
     setError(null);
     try {
       await api.post(`/admin/category-proposals/${proposal.id}/${path}`, body);
+      toast.success(`Proposal ${path === "approve" ? "approved" : path === "merge" ? "merged" : "rejected"}.`);
       onDone();
     } catch (err) {
-      setError(errorMessage(err, `Failed to ${path}.`));
+      setError(apiError(err, `Failed to ${path}.`));
     } finally {
       setBusy(false);
     }
@@ -88,11 +95,17 @@ function ProposalCard({
 
   return (
     <li className="card">
-      <strong>{proposal.label}</strong> <small>({proposal.categoryKey})</small>
+      <strong>{proposal.label}</strong> <small>({proposal.categoryKey})</small> <StatusBadge status={proposal.status} />
+      <p className="muted">Submitted {formatDate(proposal.submittedAt)}</p>
       {proposal.description && <p>{proposal.description}</p>}
       <p>
         Requested by:{" "}
-        {proposal.vendors.map((v) => v.vendor.businessName ?? v.vendor.phoneNumber).join(", ")}
+        {proposal.vendors.map((v, i) => (
+          <span key={v.vendor.id}>
+            {i > 0 && ", "}
+            <Link to={`/vendors/${v.vendor.id}`}>{v.vendor.businessName ?? v.vendor.phoneNumber}</Link>
+          </span>
+        ))}
       </p>
       {proposal.status === "rejected" && <p>Rejected: {proposal.rejectionReason}</p>}
       {proposal.resolvedCategory && (
@@ -102,7 +115,7 @@ function ProposalCard({
         </p>
       )}
 
-      {proposal.status === "pending" && mode === null && (
+      {proposal.status === "pending" && mode === null && canReview && (
         <div className="review-actions">
           <button onClick={() => setMode("approve")}>Approve…</button>
           <button onClick={() => setMode("merge")}>Merge into existing…</button>
@@ -121,16 +134,24 @@ function ProposalCard({
           <p>Starter tasks for the roadmap (at least one):</p>
           {templates.map((t, i) => (
             <div key={i} className="review-actions">
+              <label>
+                Task key
               <input
                 placeholder="task_key"
                 value={t.taskKey}
                 onChange={(e) => updateTemplate(i, { taskKey: e.target.value })}
               />
+              </label>
+              <label>
+                Task name
               <input
                 placeholder="Task name"
                 value={t.defaultNameEn}
                 onChange={(e) => updateTemplate(i, { defaultNameEn: e.target.value })}
               />
+              </label>
+              <label>
+                Lead time (days)
               <input
                 type="number"
                 min={0}
@@ -138,8 +159,9 @@ function ProposalCard({
                 value={t.defaultLeadTimeDays}
                 onChange={(e) => updateTemplate(i, { defaultLeadTimeDays: e.target.value })}
               />
+              </label>
               {templates.length > 1 && (
-                <button onClick={() => setTemplates((ts) => ts.filter((_, j) => j !== i))}>Remove</button>
+                <button type="button" className="secondary" onClick={() => setTemplates((ts) => ts.filter((_, j) => j !== i))}>Remove</button>
               )}
             </div>
           ))}
@@ -167,7 +189,7 @@ function ProposalCard({
             >
               Confirm approve
             </button>
-            <button onClick={() => setMode(null)}>Cancel</button>
+            <button type="button" className="secondary" onClick={() => setMode(null)}>Cancel</button>
           </div>
         </div>
       )}
@@ -189,7 +211,7 @@ function ProposalCard({
             <button disabled={busy || !mergeId} onClick={() => run("merge", { vendorCategoryId: mergeId })}>
               Confirm merge
             </button>
-            <button onClick={() => setMode(null)}>Cancel</button>
+            <button type="button" className="secondary" onClick={() => setMode(null)}>Cancel</button>
           </div>
         </div>
       )}
@@ -208,7 +230,7 @@ function ProposalCard({
             >
               Confirm reject
             </button>
-            <button onClick={() => setMode(null)}>Cancel</button>
+            <button type="button" className="secondary" onClick={() => setMode(null)}>Cancel</button>
           </div>
         </div>
       )}
@@ -219,13 +241,16 @@ function ProposalCard({
 }
 
 export function CategoryProposalsPage() {
-  const [tab, setTab] = useState<Status>("pending");
+  usePageTitle("Categories");
+  const [params, setParams] = useSearchParams();
+  const requested = params.get("status") as Status | null;
+  const tab: Status = TABS.some((t) => t.value === requested) ? requested! : "pending";
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [state, setState] = useState<"loading" | "error" | "ready">("loading");
 
-  const load = useCallback(async () => {
-    setState("loading");
+  const load = useCallback(async (silent = false) => {
+    if (!silent) setState("loading");
     try {
       const [p, c] = await Promise.all([
         api.get<{ proposals: Proposal[] }>("/admin/category-proposals", { params: { status: tab } }),
@@ -240,35 +265,24 @@ export function CategoryProposalsPage() {
   }, [tab]);
 
   useEffect(() => {
-    load();
+    void load();
   }, [load]);
 
   return (
     <div className="page">
       <header className="page-header">
         <h1>Category proposals</h1>
-        <Link to="/vendors">Vendor queue</Link>
       </header>
 
-      <div className="tabs">
-        {TABS.map((t) => (
-          <button
-            key={t.value}
-            className={t.value === tab ? "tab tab-active" : "tab"}
-            onClick={() => setTab(t.value)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      <Tabs label="Proposal status" tabs={TABS} value={tab} onChange={(v) => setParams({ status: v }, { replace: true })} />
 
       {state === "loading" && <p className="page-status">Loading…</p>}
-      {state === "error" && <p className="page-status error-text">Failed to load proposals.</p>}
+      {state === "error" && <ErrorRetry message="Failed to load proposals." onRetry={() => void load()} />}
       {state === "ready" && proposals.length === 0 && <p className="page-status">Nothing here.</p>}
 
       <ul className="vendor-list">
         {proposals.map((p) => (
-          <ProposalCard key={p.id} proposal={p} categories={categories} onDone={load} />
+          <ProposalCard key={p.id} proposal={p} categories={categories} onDone={() => void load(true)} />
         ))}
       </ul>
     </div>

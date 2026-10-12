@@ -4,9 +4,11 @@ import axios from "axios";
 import type { AuthTokens } from "@sanchalan/shared-types";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-context.tsx";
+import { usePageTitle } from "../components/usePageTitle.ts";
 
 export function LoginPage() {
-  const { state, signIn } = useAuth();
+  usePageTitle("Sign in");
+  const { state, signIn, notice } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -21,14 +23,14 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       const { data } = await api.post<AuthTokens>("/admin/auth/login", { email, password });
-      signIn(data);
+      await signIn(data);
       navigate("/vendors", { replace: true });
     } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 401) {
-        setError("Invalid email or password.");
-      } else {
-        setError("Something went wrong. Please try again.");
-      }
+      const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+      if (status === 401) setError("Invalid email or password.");
+      else if (status === 429)
+        setError((err as { response?: { data?: { error?: string } } }).response?.data?.error ?? "Too many attempts. Try again later.");
+      else setError("Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -38,26 +40,20 @@ export function LoginPage() {
     <div className="centered-page">
       <form className="card login-form" onSubmit={handleSubmit}>
         <h1>Sanchalan Admin</h1>
+        {notice && <p className="notice">{notice}</p>}
         <label>
           Email
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoFocus
-          />
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoFocus autoComplete="username" />
         </label>
         <label>
           Password
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
         </label>
-        {error && <p className="error-text">{error}</p>}
+        {error && (
+          <p className="error-text" role="alert">
+            {error}
+          </p>
+        )}
         <button type="submit" disabled={submitting}>
           {submitting ? "Logging in…" : "Log in"}
         </button>
