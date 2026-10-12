@@ -103,6 +103,7 @@ class VendorEditorPage extends ConsumerWidget {
     final me = ref.watch(vendorDataProvider).value;
     final categories = ref.watch(vendorCategoriesProvider);
     if (me == null) return const DataLoadingScreen();
+    final proposals = ref.watch(myCategoryProposalsProvider).value ?? const <CategoryProposal>[];
     final keys = categories.value;
     if (keys == null) {
       return Scaffold(
@@ -147,6 +148,17 @@ class VendorEditorPage extends ConsumerWidget {
     return VendorProfileEditorView(
       me: me,
       categoryKeys: keys.map((c) => c.categoryKey).toList(),
+      categoryLabels: {for (final c in keys) if (c.label != null) c.categoryKey: c.label!},
+      proposals: proposals,
+      onPropose: (label, description) async {
+        try {
+          await repo.proposeCategory(label, description: description);
+          ref.invalidate(myCategoryProposalsProvider);
+          return null;
+        } catch (e) {
+          return friendlyError(e, 'Could not send your suggestion.');
+        }
+      },
       focusField: focusField,
       onBack: () => context.canPop() ? context.pop() : context.go(AppPaths.vendorHome),
       onSave: save,

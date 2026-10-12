@@ -15,12 +15,14 @@ VendorCategory _$VendorCategoryFromJson(Map<String, dynamic> json) =>
               ?.map((e) => $enumDecode(_$EventTypeEnumMap, e))
               .toList() ??
           [],
+      label: json['label'] as String?,
     );
 
 Map<String, dynamic> _$VendorCategoryToJson(VendorCategory instance) =>
     <String, dynamic>{
       'id': instance.id,
       'categoryKey': instance.categoryKey,
+      'label': instance.label,
       'applicableEventTypes': instance.applicableEventTypes
           .map((e) => _$EventTypeEnumMap[e]!)
           .toList(),
@@ -270,3 +272,44 @@ ReorderPastWorkBody _$ReorderPastWorkBodyFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$ReorderPastWorkBodyToJson(
   ReorderPastWorkBody instance,
 ) => <String, dynamic>{'itemIds': instance.itemIds};
+
+CategoryProposal _$CategoryProposalFromJson(Map<String, dynamic> json) =>
+    CategoryProposal(
+      id: json['id'] as String,
+      label: json['label'] as String,
+      categoryKey: json['categoryKey'] as String,
+      status: $enumDecode(_$CategoryProposalStatusEnumMap, json['status']),
+      description: json['description'] as String?,
+      rejectionReason: json['rejectionReason'] as String?,
+    );
+
+Map<String, dynamic> _$CategoryProposalToJson(CategoryProposal instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'label': instance.label,
+      'categoryKey': instance.categoryKey,
+      'description': instance.description,
+      'status': _$CategoryProposalStatusEnumMap[instance.status]!,
+      'rejectionReason': instance.rejectionReason,
+    };
+
+const _$CategoryProposalStatusEnumMap = {
+  CategoryProposalStatus.pending: 'pending',
+  CategoryProposalStatus.approved: 'approved',
+  CategoryProposalStatus.rejected: 'rejected',
+  CategoryProposalStatus.merged: 'merged',
+};
+
+ListCategoryProposalsResponse _$ListCategoryProposalsResponseFromJson(
+  Map<String, dynamic> json,
+) => ListCategoryProposalsResponse(
+  proposals: (json['proposals'] as List<dynamic>)
+      .map((e) => CategoryProposal.fromJson(e as Map<String, dynamic>))
+      .toList(),
+);
+
+Map<String, dynamic> _$ListCategoryProposalsResponseToJson(
+  ListCategoryProposalsResponse instance,
+) => <String, dynamic>{
+  'proposals': instance.proposals.map((e) => e.toJson()).toList(),
+};

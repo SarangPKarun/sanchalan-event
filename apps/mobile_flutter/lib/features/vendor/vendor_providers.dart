@@ -55,6 +55,12 @@ final vendorCategoriesProvider = FutureProvider.autoDispose<List<VendorCategory>
   retry: _noRetry,
 );
 
+/// The vendor's own category suggestions and how review went.
+final myCategoryProposalsProvider = FutureProvider.autoDispose<List<CategoryProposal>>(
+  (ref) => ref.watch(vendorRepositoryProvider).listMyProposals(),
+  retry: _noRetry,
+);
+
 /// The directory filters the organizer has chosen (kept while they move between tabs).
 class VendorFiltersNotifier extends Notifier<VendorFilters> {
   @override

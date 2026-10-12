@@ -12,6 +12,10 @@ import {
   updateProfileHandler,
   withdrawHandler,
 } from "../controllers/vendor-self.controller.js";
+import {
+  listMyProposalsHandler,
+  proposeCategoryHandler,
+} from "../controllers/category-proposal.controller.js";
 
 export const vendorSelfRouter: RouterType = Router();
 vendorSelfRouter.use(requireAuth, requireRole("vendor"));
@@ -19,6 +23,8 @@ vendorSelfRouter.use(requireAuth, requireRole("vendor"));
 vendorSelfRouter.get("/", getMeHandler);
 vendorSelfRouter.patch("/", updateProfileHandler);
 vendorSelfRouter.put("/categories", setCategoriesHandler);
+vendorSelfRouter.get("/category-proposals", listMyProposalsHandler);
+vendorSelfRouter.post("/category-proposals", proposeCategoryHandler);
 vendorSelfRouter.post("/past-work", addPastWorkHandler);
 vendorSelfRouter.put("/past-work/order", reorderPastWorkHandler);
 vendorSelfRouter.patch("/past-work/:itemId", updatePastWorkHandler);

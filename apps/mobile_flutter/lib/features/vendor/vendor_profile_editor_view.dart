@@ -14,6 +14,7 @@ import '../../shared/widgets/bottom_action_bar.dart';
 import '../../shared/widgets/confirm_dialog.dart';
 import '../../shared/widgets/primary_button.dart';
 import '../../shared/widgets/progress_ring.dart';
+import '../../shared/widgets/status_chip.dart';
 import 'sheets/past_work_sheet.dart';
 import 'vendor_profile_logic.dart';
 import 'widgets/notice_banner.dart';
@@ -32,6 +33,9 @@ class VendorProfileEditorView extends StatefulWidget {
     required this.onSubmit,
     required this.onSavePastWork,
     required this.onDeletePastWork,
+    this.categoryLabels = const {},
+    this.proposals = const [],
+    this.onPropose,
     this.focusField,
     this.onBack,
   });
@@ -49,6 +53,15 @@ class VendorProfileEditorView extends StatefulWidget {
   final Future<String?> Function(VendorProfileForm form) onSubmit;
   final Future<String?> Function(PastWorkSaved entry, String? itemId) onSavePastWork;
   final Future<String?> Function(String itemId) onDeletePastWork;
+
+  /// Admin-set display names for categories added after launch, by key.
+  final Map<String, String> categoryLabels;
+
+  /// This vendor's own category suggestions.
+  final List<CategoryProposal> proposals;
+
+  /// Sends a new category suggestion; returns an error message or null. Null hides the option.
+  final Future<String?> Function(String label, String? description)? onPropose;
 
   /// Scrolls to the section of this missing item when the editor opens.
   final VendorRequiredField? focusField;
@@ -234,6 +247,20 @@ class _VendorProfileEditorViewState extends State<VendorProfileEditorView> {
         }
       });
 
+  Future<void> _propose() async {
+    final result = await showDialog<(String, String?)>(
+      context: context,
+      builder: (_) => const _ProposeCategoryDialog(),
+    );
+    if (result == null || !mounted) return;
+    final error = await widget.onPropose!(result.$1, result.$2);
+    if (!mounted) return;
+    setState(() {
+      _error = error;
+      _notice = error == null ? 'Sent for review. We will add it for everyone once approved.' : null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
@@ -329,7 +356,7 @@ class _VendorProfileEditorViewState extends State<VendorProfileEditorView> {
                           for (final k in widget.categoryKeys)
                             FilterChip(
                               avatar: Icon(categoryIcon(k), size: 18),
-                              label: Text(categoryLabel(k)),
+                              label: Text(widget.categoryLabels[k] ?? categoryLabel(k)),
                               selected: _categories.contains(k),
                               showCheckmark: false,
                               onSelected: _categories.contains(k) || _categories.length < vendorMaxCategories
@@ -339,6 +366,34 @@ class _VendorProfileEditorViewState extends State<VendorProfileEditorView> {
                         ],
                       ),
                       if (errors['categories'] != null) _FieldError(errors['categories']!),
+                      if (widget.onPropose != null) ...[
+                        const SizedBox(height: AppSpace.s),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: ActionChip(
+                            avatar: const Icon(Icons.add, size: 18),
+                            label: const Text('Suggest a new category'),
+                            onPressed: _propose,
+                          ),
+                        ),
+                      ],
+                      for (final p in widget.proposals)
+                        Padding(
+                          padding: const EdgeInsets.only(top: AppSpace.s),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(child: Text(p.label, style: text.bodyMedium)),
+                                  StatusChip.proposal(p.status),
+                                ],
+                              ),
+                              if (p.status == CategoryProposalStatus.rejected && p.rejectionReason != null)
+                                Text(p.rejectionReason!, style: text.bodySmall),
+                            ],
+                          ),
+                        ),
                       const SizedBox(height: AppSpace.l),
                       KeyedSubtree(
                         key: _sections[VendorRequiredField.priceTier],
@@ -624,6 +679,61 @@ class _ProgressRow extends StatelessWidget {
             done == total ? 'Everything is filled in. Ready to submit.' : '$done of $total steps done',
             style: text.titleMedium,
           ),
+        ),
+      ],
+    );
+  }
+}
+
+
+class _ProposeCategoryDialog extends StatefulWidget {
+  const _ProposeCategoryDialog();
+
+  @override
+  State<_ProposeCategoryDialog> createState() => _ProposeCategoryDialogState();
+}
+
+class _ProposeCategoryDialogState extends State<_ProposeCategoryDialog> {
+  final _label = TextEditingController();
+  final _description = TextEditingController();
+
+  @override
+  void dispose() {
+    _label.dispose();
+    _description.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final valid = _label.text.trim().length >= 3;
+    return AlertDialog(
+      title: const Text('Suggest a new category'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _label,
+            maxLength: 40,
+            decoration: const InputDecoration(labelText: 'Category name', hintText: 'e.g. Mehendi artist'),
+            onChanged: (_) => setState(() {}),
+          ),
+          TextField(
+            controller: _description,
+            maxLength: 300,
+            maxLines: 2,
+            decoration: const InputDecoration(labelText: 'What does it cover? (optional)'),
+          ),
+          const Text('Our team reviews it. Once approved, every vendor and family can use it.'),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: valid
+              ? () => Navigator.pop(context, (_label.text.trim(), _description.text.trim().isEmpty ? null : _description.text.trim()))
+              : null,
+          child: const Text('Send for review'),
         ),
       ],
     );

@@ -11,10 +11,14 @@ class VendorCategory {
     required this.id,
     required this.categoryKey,
     required this.applicableEventTypes,
+    this.label,
   });
   factory VendorCategory.fromJson(Map<String, dynamic> json) => _$VendorCategoryFromJson(json);
   final String id;
   final String categoryKey;
+
+  /// Display name set by an admin for categories added after launch; null for the seeded ones.
+  final String? label;
   @JsonKey(defaultValue: <EventType>[])
   final List<EventType> applicableEventTypes;
   Map<String, dynamic> toJson() => _$VendorCategoryToJson(this);
@@ -262,4 +266,34 @@ class ReorderPastWorkBody {
       _$ReorderPastWorkBodyFromJson(json);
   final List<String> itemIds;
   Map<String, dynamic> toJson() => _$ReorderPastWorkBodyToJson(this);
+}
+
+/// A category the vendor suggested, with the admin's decision.
+@JsonSerializable()
+class CategoryProposal {
+  const CategoryProposal({
+    required this.id,
+    required this.label,
+    required this.categoryKey,
+    required this.status,
+    this.description,
+    this.rejectionReason,
+  });
+  factory CategoryProposal.fromJson(Map<String, dynamic> json) => _$CategoryProposalFromJson(json);
+  final String id;
+  final String label;
+  final String categoryKey;
+  final String? description;
+  final CategoryProposalStatus status;
+  final String? rejectionReason;
+  Map<String, dynamic> toJson() => _$CategoryProposalToJson(this);
+}
+
+@JsonSerializable(explicitToJson: true)
+class ListCategoryProposalsResponse {
+  const ListCategoryProposalsResponse({required this.proposals});
+  factory ListCategoryProposalsResponse.fromJson(Map<String, dynamic> json) =>
+      _$ListCategoryProposalsResponseFromJson(json);
+  final List<CategoryProposal> proposals;
+  Map<String, dynamic> toJson() => _$ListCategoryProposalsResponseToJson(this);
 }

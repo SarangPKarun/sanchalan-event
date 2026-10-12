@@ -35,6 +35,16 @@ class StatusChip extends StatelessWidget {
     return StatusChip(key: key, label: label, tone: tone, icon: icon);
   }
 
+  factory StatusChip.proposal(CategoryProposalStatus status, {Key? key}) {
+    final (label, tone, icon) = switch (status) {
+      CategoryProposalStatus.pending => ('In review', StatusTone.warning, Icons.hourglass_top),
+      CategoryProposalStatus.approved => ('Approved', StatusTone.success, Icons.check_circle_outline),
+      CategoryProposalStatus.merged => ('Added as existing', StatusTone.success, Icons.check_circle_outline),
+      CategoryProposalStatus.rejected => ('Not accepted', StatusTone.error, Icons.error_outline),
+    };
+    return StatusChip(key: key, label: label, tone: tone, icon: icon);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(

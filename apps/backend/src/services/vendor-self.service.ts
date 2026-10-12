@@ -97,7 +97,7 @@ async function markReverificationIfNeeded(
 export async function listVendorCategories() {
   const categories = await prisma.vendorCategory.findMany({
     orderBy: { categoryKey: "asc" },
-    select: { id: true, categoryKey: true },
+    select: { id: true, categoryKey: true, label: true },
   });
   return { categories };
 }

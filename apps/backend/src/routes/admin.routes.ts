@@ -1,5 +1,6 @@
 import { Router, type Router as RouterType } from "express";
 import { requireAdminRole, requireAuth, requireRole } from "../middleware/auth.middleware.js";
+import { listVendorCategoriesHandler } from "../controllers/vendor-self.controller.js";
 import { adminLoginHandler } from "../controllers/admin-auth.controller.js";
 import {
   approveVendorHandler,
@@ -9,6 +10,13 @@ import {
   suspendVendorHandler,
   unsuspendVendorHandler,
 } from "../controllers/admin-vendor.controller.js";
+import {
+  approveProposalHandler,
+  getProposalHandler,
+  listProposalsHandler,
+  mergeProposalHandler,
+  rejectProposalHandler,
+} from "../controllers/category-proposal.controller.js";
 
 export const adminRouter: RouterType = Router();
 
@@ -36,4 +44,23 @@ adminRouter.post(
   "/vendors/:id/unsuspend",
   requireAdminRole("super_admin", "vendor_reviewer"),
   unsuspendVendorHandler
+);
+
+adminRouter.get("/vendor-categories", listVendorCategoriesHandler);
+adminRouter.get("/category-proposals", listProposalsHandler);
+adminRouter.get("/category-proposals/:id", getProposalHandler);
+adminRouter.post(
+  "/category-proposals/:id/approve",
+  requireAdminRole("super_admin", "vendor_reviewer"),
+  approveProposalHandler
+);
+adminRouter.post(
+  "/category-proposals/:id/reject",
+  requireAdminRole("super_admin", "vendor_reviewer"),
+  rejectProposalHandler
+);
+adminRouter.post(
+  "/category-proposals/:id/merge",
+  requireAdminRole("super_admin", "vendor_reviewer"),
+  mergeProposalHandler
 );

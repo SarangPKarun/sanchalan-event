@@ -149,6 +149,13 @@ Defined in `apps/backend/prisma/schema.prisma`. Tables use snake_case via `@@map
 - Those four actions are limited to `super_admin` and `vendor_reviewer`.
 - The queue is filterable by status.
 
+### 5.6.1 Vendor-proposed categories
+- A vendor can suggest a category that is not in the list (`POST /vendor/me/category-proposals`). The name is normalised to a key; an existing key returns 409, and a name already pending attaches the vendor to the same proposal. At most 3 pending proposals per vendor.
+- Proposals are visible only to the proposing vendor (`GET /vendor/me/category-proposals`) and to admins. They are not listed in `GET /vendor-categories` and cannot be assigned until decided.
+- Admins decide in a separate queue (`super_admin`, `vendor_reviewer`): **approve** creates a global `VendorCategory` and `TaskCategory` with the same key plus the starter `TaskTemplate`s the admin supplies, and assigns every attached vendor (skipping any already at 5 categories); **merge** maps the proposal to an existing category; **reject** records a reason.
+- Because roadmap generation reads all `TaskCategory` rows and the templates for the event type, an approved category is offered to every later roadmap. Existing roadmaps are not regenerated.
+- Not built: notifying the vendor of the decision (they see the status in the app).
+
 ### 5.7 Organizer vendor browse
 - `GET /vendors` returns only `published` vendors, ordered by business name. Filters: category, priceTier, region.
 - `GET /vendors/:id` is read-only.
@@ -165,8 +172,8 @@ All routes require a bearer token except `/auth/*` and `/admin/auth/login`. Ther
 | Roadmap | `POST /event-groups/:id/generate-roadmap`, `GET/POST /event-groups/:id/tasks`, `PATCH/DELETE /tasks/:id`, `GET /task-categories` |
 | Budget | `POST /event-groups/:id/budget-categories`, `PATCH/DELETE /event-groups/:id/budget-categories/:categoryId` |
 | Vendor browse (organizer) | `GET /vendors`, `GET /vendors/:id` |
-| Vendor self | `GET/PATCH /vendor/me`, `PUT /vendor/me/categories`, `POST /vendor/me/past-work`, `PUT /vendor/me/past-work/order`, `PATCH/DELETE /vendor/me/past-work/:itemId`, `POST /vendor/me/submit`, `POST /vendor/me/withdraw`, `GET /vendor-categories` (organizer or vendor) |
-| Admin | `POST /admin/auth/login`, `GET /admin/vendors` (`?status`), `GET /admin/vendors/:id`, `POST /admin/vendors/:id/{approve,reject,suspend,unsuspend}` |
+| Vendor self | `GET/PATCH /vendor/me`, `PUT /vendor/me/categories`, `POST /vendor/me/past-work`, `PUT /vendor/me/past-work/order`, `PATCH/DELETE /vendor/me/past-work/:itemId`, `POST /vendor/me/submit`, `POST /vendor/me/withdraw`, `GET/POST /vendor/me/category-proposals`, `GET /vendor-categories` (organizer or vendor) |
+| Admin | `POST /admin/auth/login`, `GET /admin/vendors` (`?status`), `GET /admin/vendors/:id`, `POST /admin/vendors/:id/{approve,reject,suspend,unsuspend}`, `GET /admin/vendor-categories`, `GET /admin/category-proposals` (`?status`), `GET /admin/category-proposals/:id`, `POST /admin/category-proposals/:id/{approve,reject,merge}` |
 
 ## 7. Screens
 

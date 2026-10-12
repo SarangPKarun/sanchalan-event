@@ -98,6 +98,7 @@ model Vendor {
   eventMedia              EventMedia[]
   productionPipelineItems ProductionPipelineItem[]
   reviewLogs              VendorReviewLog[]
+  categoryProposals       CategoryProposalVendor[]
 
   @@map("vendors")
 }
@@ -106,11 +107,56 @@ model Vendor {
 model VendorCategory {
   id                   String      @id @default(uuid()) @db.Uuid
   categoryKey          String      @unique @map("category_key")
+  label                String?
   applicableEventTypes EventType[] @map("applicable_event_types")
 
   vendorVendorCategories VendorVendorCategory[]
+  proposals              CategoryProposal[]
 
   @@map("vendor_categories")
+}
+
+enum CategoryProposalStatus {
+  pending
+  approved
+  rejected
+  merged
+}
+
+/// [ACTIVE] A vendor-suggested category awaiting admin review. On approval it becomes a global
+/// VendorCategory + TaskCategory (with starter task templates); on merge it maps to an existing one.
+model CategoryProposal {
+  id                       String                 @id @default(uuid()) @db.Uuid
+  label                    String
+  categoryKey              String                 @map("category_key")
+  description              String?
+  status                   CategoryProposalStatus @default(pending)
+  rejectionReason          String?                @map("rejection_reason")
+  submittedAt              DateTime               @default(now()) @map("submitted_at")
+  reviewedAt               DateTime?              @map("reviewed_at")
+  reviewedBy               String?                @map("reviewed_by") @db.Uuid
+  resolvedVendorCategoryId String?                @map("resolved_vendor_category_id") @db.Uuid
+
+  reviewer         Admin?                   @relation(fields: [reviewedBy], references: [id])
+  resolvedCategory VendorCategory?          @relation(fields: [resolvedVendorCategoryId], references: [id])
+  vendors          CategoryProposalVendor[]
+
+  @@index([status, submittedAt])
+  @@index([categoryKey])
+  @@map("category_proposals")
+}
+
+/// [ACTIVE] Vendors attached to a proposal (duplicate proposals share one row).
+model CategoryProposalVendor {
+  proposalId String   @map("proposal_id") @db.Uuid
+  vendorId   String   @map("vendor_id") @db.Uuid
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  proposal CategoryProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  vendor   Vendor           @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+
+  @@id([proposalId, vendorId])
+  @@map("category_proposal_vendors")
 }
 
 /// [ACTIVE] Junction table — a vendor can serve multiple categories.
@@ -181,8 +227,9 @@ model Admin {
   role         AdminRole
   createdAt    DateTime  @default(now()) @map("created_at")
 
-  reviewedVendors Vendor[]
-  reviewLogs      VendorReviewLog[]
+  reviewedVendors   Vendor[]
+  reviewLogs        VendorReviewLog[]
+  reviewedProposals CategoryProposal[]
 
   @@map("admins")
 }
@@ -431,6 +478,7 @@ model GuestSeatingAssignment {
 model TaskCategory {
   id                   String      @id @default(uuid()) @db.Uuid
   categoryKey          String      @unique @map("category_key")
+  label                String?
   applicableEventTypes EventType[] @map("applicable_event_types")
 
   taskTemplates TaskTemplate[]

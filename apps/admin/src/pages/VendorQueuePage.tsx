@@ -26,9 +26,12 @@ export function VendorQueuePage() {
     <div className="page">
       <header className="page-header">
         <h1>Vendor review queue</h1>
-        <button className="link-button" onClick={() => signOut()}>
-          Log out
-        </button>
+        <span>
+          <Link to="/categories">Category proposals</Link>{" "}
+          <button className="link-button" onClick={() => signOut()}>
+            Log out
+          </button>
+        </span>
       </header>
 
       <div className="tabs">

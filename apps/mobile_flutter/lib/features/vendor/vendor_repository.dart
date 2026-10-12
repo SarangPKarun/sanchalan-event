@@ -60,6 +60,16 @@ class VendorRepository {
 
   // --- self-service (vendor side) ---
 
+  Future<List<CategoryProposal>> listMyProposals() async =>
+      ListCategoryProposalsResponse.fromJson(await _call('GET', '/vendor/me/category-proposals')).proposals;
+
+  Future<CategoryProposal> proposeCategory(String label, {String? description}) async =>
+      CategoryProposal.fromJson(await _call(
+        'POST',
+        '/vendor/me/category-proposals',
+        body: {'label': label, if (description != null && description.isNotEmpty) 'description': description},
+      ));
+
   Future<VendorMeResponse> getMe() async => VendorMeResponse.fromJson(await _call('GET', '/vendor/me'));
 
   Future<UpdateVendorProfileResponse> updateProfile(UpdateVendorProfileBody body) async =>
