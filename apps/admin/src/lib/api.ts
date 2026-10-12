@@ -10,6 +10,12 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
+  // Empty filters ("status=") would fail the backend's enum validation; omit them instead.
+  if (config.params && typeof config.params === "object") {
+    config.params = Object.fromEntries(
+      Object.entries(config.params).filter(([, v]) => v !== "" && v !== undefined && v !== null)
+    );
+  }
   const isAuthEndpoint = config.url?.startsWith("/admin/auth/") || config.url?.startsWith("/auth/");
   if (!isAuthEndpoint) {
     const accessToken = getAccessToken();
