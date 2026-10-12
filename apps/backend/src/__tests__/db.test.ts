@@ -14,9 +14,12 @@ suite("database-backed admin services", () => {
   let auth: typeof import("../services/admin-auth.service.js");
   let catalog: typeof import("../services/admin-catalog.service.js");
   let oversight: typeof import("../services/admin-oversight.service.js");
+  let commerce: typeof import("../services/admin-commerce.service.js");
   let superId: string;
   const vendorIds: string[] = [];
   const organizerIds: string[] = [];
+  const reviewIds: string[] = [];
+  const eventIds: string[] = [];
 
   beforeAll(async () => {
     ({ prisma } = await import("../lib/prisma.js"));
@@ -25,6 +28,7 @@ suite("database-backed admin services", () => {
     auth = await import("../services/admin-auth.service.js");
     catalog = await import("../services/admin-catalog.service.js");
     oversight = await import("../services/admin-oversight.service.js");
+    commerce = await import("../services/admin-commerce.service.js");
     const { hashPassword } = await import("../lib/hash.js");
     const admin = await prisma.admin.create({
       data: { name: "T", email: `${run}-super@test.dev`, passwordHash: await hashPassword("correct-horse-battery"), role: "super_admin" },
@@ -42,8 +46,10 @@ suite("database-backed admin services", () => {
     await prisma.vendorVendorCategory.deleteMany({ where: { vendorId: { in: vendorIds } } });
     await prisma.vendorCategory.deleteMany({ where: { categoryKey: { startsWith: `t${run}` } } });
     await prisma.taskCategory.deleteMany({ where: { categoryKey: { startsWith: `t${run}` } } });
+    await prisma.review.deleteMany({ where: { id: { in: reviewIds } } });
     await prisma.vendor.deleteMany({ where: { id: { in: vendorIds } } });
     await prisma.refreshToken.deleteMany({ where: { userId: { in: organizerIds } } });
+    await prisma.eventGroup.deleteMany({ where: { id: { in: eventIds } } });
     await prisma.organizer.deleteMany({ where: { id: { in: organizerIds } } });
     await prisma.admin.deleteMany({ where: { email: { contains: run } } });
     await prisma.$disconnect();
@@ -132,5 +138,25 @@ suite("database-backed admin services", () => {
     const line = csv.split("\n").find((l) => l.includes(`${run}-csv`))!;
     expect(line).toContain(`"'=HYPERLINK(`);
     expect(line).not.toContain(`,"=HYPERLINK`);
+  });
+
+  it("hides and restores a review once each and records who did it", async () => {
+    const v = await prisma.vendor.create({ data: { phoneNumber: `+91${run}88`, status: "published" } });
+    vendorIds.push(v.id);
+    const o = await prisma.organizer.create({ data: { phoneNumber: `+91${run}89`, status: "active" } });
+    organizerIds.push(o.id);
+    const e = await prisma.eventGroup.create({
+      data: { organizerId: o.id, eventType: "wedding", name: "T", region: "Pune", totalBudget: 1, budgetTier: "standard", guestCountEstimate: 1, primaryDate: new Date(), status: "planning" },
+    });
+    eventIds.push(e.id);
+    const r = await prisma.review.create({ data: { vendorId: v.id, eventGroupId: e.id, rating: 1, comment: "bad", status: "flagged" } });
+    reviewIds.push(r.id);
+
+    await expect(commerce.moderateReview(superId, r.id, "restore")).rejects.toMatchObject({ status: 409 });
+    const hidden = await commerce.moderateReview(superId, r.id, "hide", "Abusive");
+    expect(hidden).toMatchObject({ status: "hidden", moderationReason: "Abusive", moderatedBy: superId });
+    await expect(commerce.moderateReview(superId, r.id, "hide", "again")).rejects.toMatchObject({ status: 409 });
+    expect((await commerce.moderateReview(superId, r.id, "restore")).status).toBe("visible");
+    await expect(commerce.moderateReview(superId, crypto.randomUUID(), "hide", "x")).rejects.toMatchObject({ status: 404 });
   });
 });

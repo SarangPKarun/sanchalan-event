@@ -261,6 +261,7 @@ model Admin {
   reviewedVendors   Vendor[]
   reviewLogs        VendorReviewLog[]
   reviewedProposals CategoryProposal[]
+  moderatedReviews  Review[]
 
   @@map("admins")
 }
@@ -783,17 +784,29 @@ model VendorAvailability {
 }
 
 /// [FUTURE — Phase 2/3] Built now per explicit request.
+enum ReviewStatus {
+  visible
+  flagged
+  hidden
+}
+
 model Review {
-  id           String   @id @default(uuid()) @db.Uuid
-  vendorId     String   @map("vendor_id") @db.Uuid
-  eventGroupId String   @map("event_group_id") @db.Uuid
-  rating       Int
-  comment      String?
-  createdAt    DateTime @default(now()) @map("created_at")
+  id               String       @id @default(uuid()) @db.Uuid
+  vendorId         String       @map("vendor_id") @db.Uuid
+  eventGroupId     String       @map("event_group_id") @db.Uuid
+  rating           Int
+  comment          String?
+  status           ReviewStatus @default(visible)
+  moderationReason String?      @map("moderation_reason")
+  moderatedAt      DateTime?    @map("moderated_at")
+  moderatedBy      String?      @map("moderated_by") @db.Uuid
+  createdAt        DateTime     @default(now()) @map("created_at")
 
   vendor     Vendor     @relation(fields: [vendorId], references: [id])
   eventGroup EventGroup @relation(fields: [eventGroupId], references: [id])
+  moderator  Admin?     @relation(fields: [moderatedBy], references: [id])
 
+  @@index([status, createdAt])
   @@map("reviews")
 }
 

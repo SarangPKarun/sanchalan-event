@@ -49,6 +49,14 @@ import {
   taskEditStatsHandler,
   unsuspendOrganizerHandler,
 } from "../controllers/admin-oversight.controller.js";
+import {
+  getBookingHandler,
+  hideReviewHandler,
+  listBookingsHandler,
+  listPaymentsHandler,
+  listReviewsHandler,
+  restoreReviewHandler,
+} from "../controllers/admin-commerce.controller.js";
 
 export const adminRouter: RouterType = Router();
 
@@ -128,3 +136,11 @@ adminRouter.get("/roadmap-logs/:id", getRoadmapLogHandler);
 adminRouter.get("/task-edit-stats", taskEditStatsHandler);
 adminRouter.get("/audit-logs", requireAdminRole("super_admin"), listAuditHandler);
 adminRouter.get("/audit-logs.csv", requireAdminRole("super_admin"), auditCsvHandler);
+
+// Bookings and payments are read-only: the admin never moves money. Reviews can be hidden and restored.
+adminRouter.get("/bookings", listBookingsHandler);
+adminRouter.get("/bookings/:id", getBookingHandler);
+adminRouter.get("/payments", listPaymentsHandler);
+adminRouter.get("/reviews", listReviewsHandler);
+adminRouter.post("/reviews/:id/hide", requireAdminRole("super_admin", "vendor_reviewer"), hideReviewHandler);
+adminRouter.post("/reviews/:id/restore", requireAdminRole("super_admin", "vendor_reviewer"), restoreReviewHandler);

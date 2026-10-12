@@ -5,6 +5,7 @@ import { audit } from "../lib/audit.js";
 import { generateCompletion } from "../lib/llm.js";
 import { extractJsonPayload } from "../schemas/roadmap.schema.js";
 import { z } from "zod";
+import { commerceCounts } from "./admin-commerce.service.js";
 import type { updateTemplateSchema } from "../schemas/admin-list.schema.js";
 
 type UpdateTemplateInput = z.infer<typeof updateTemplateSchema>;
@@ -243,6 +244,7 @@ export async function stats() {
   const day = 24 * 60 * 60 * 1000;
   const weekAgo = new Date(Date.now() - 7 * day);
   const monthAgo = new Date(Date.now() - 30 * day);
+  const commerce = await commerceCounts();
   const [vendorRows, proposalRows, organizers, events, roadmapsWeek, roadmapsTotal, failedWeek, tokens, oldestVendor, oldestProposal] =
     await Promise.all([
       prisma.vendor.groupBy({ by: ["status"], _count: true }),
@@ -272,5 +274,6 @@ export async function stats() {
       tokensLastThirtyDays: { input: tokens._sum.inputTokens ?? 0, output: tokens._sum.outputTokens ?? 0 },
     },
     oldestPending: { vendor: oldestVendor, proposal: oldestProposal },
+    commerce,
   };
 }

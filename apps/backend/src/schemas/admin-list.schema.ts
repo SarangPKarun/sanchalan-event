@@ -79,3 +79,19 @@ export const auditQuerySchema = z.object({
   pageSize: pageQuery.pageSize,
 });
 export const suspendOrganizerSchema = z.object({ reason: z.string().trim().min(1).max(1000) });
+
+export const listBookingsQuerySchema = z.object({
+  status: z.enum(["requested", "confirmed", "cancelled", "completed"]).optional(),
+  ...pageQuery,
+});
+export const listPaymentsQuerySchema = z.object({
+  status: z.enum(["pending", "paid", "overdue"]).optional(),
+  page: pageQuery.page,
+  pageSize: pageQuery.pageSize,
+});
+export const listReviewsQuerySchema = z.object({
+  status: z.enum(["visible", "flagged", "hidden"]).optional(),
+  rating: z.coerce.number().int().min(1).max(5).optional(),
+  ...pageQuery,
+});
+export const moderateReviewSchema = z.object({ reason: z.string().trim().min(1).max(1000) });
