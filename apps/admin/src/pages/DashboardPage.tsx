@@ -24,7 +24,8 @@ function Card({ to, label, value, note, warn }: { to?: string; label: string; va
       {note && <span className="muted">{note}</span>}
     </>
   );
-  return to ? <Link to={to} className="card stat-card">{body}</Link> : <div className="card stat-card">{body}</div>;
+  const cls = warn ? "card stat-card stat-card-warn" : "card stat-card";
+  return to ? <Link to={to} className={cls}>{body}</Link> : <div className={cls}>{body}</div>;
 }
 
 export function DashboardPage() {

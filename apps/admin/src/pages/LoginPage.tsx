@@ -4,6 +4,7 @@ import axios from "axios";
 import type { AuthTokens } from "@sanchalan/shared-types";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-context.tsx";
+import { BrandMark } from "../components/icons.tsx";
 import { usePageTitle } from "../components/usePageTitle.ts";
 
 export function LoginPage() {
@@ -37,9 +38,11 @@ export function LoginPage() {
   }
 
   return (
-    <div className="centered-page">
+    <div className="centered-page login-page">
       <form className="card login-form" onSubmit={handleSubmit}>
+        <div className="brand"><BrandMark /></div>
         <h1>Sanchalan Admin</h1>
+        <p className="muted">Sign in to continue.</p>
         {notice && <p className="notice">{notice}</p>}
         <label>
           Email
