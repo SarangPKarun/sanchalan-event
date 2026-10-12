@@ -250,7 +250,7 @@ export async function generateRoadmap(
 
   const [templateRows, categories] = await Promise.all([
     prisma.taskTemplate.findMany({
-      where: { eventType: eventGroup.eventType },
+      where: { eventType: eventGroup.eventType, taskCategory: { isActive: true } },
       include: { taskCategory: true },
     }),
     // ALL categories, not just ones touched by matching templates — every
@@ -258,7 +258,7 @@ export async function generateRoadmap(
     // so a non-wedding EventGroup could get zero/few templates and a
     // templates-derived category map would be wrong/empty exactly when a
     // custom task most needs a category to attach to.
-    prisma.taskCategory.findMany(),
+    prisma.taskCategory.findMany({ where: { isActive: true } }),
   ]);
 
   const templates: TemplateForPrompt[] = templateRows.map((t) => ({

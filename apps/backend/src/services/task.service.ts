@@ -21,7 +21,7 @@ export async function resolveTaskCategory(category: string) {
 }
 
 export async function listTaskCategories() {
-  const rows = await prisma.taskCategory.findMany({ orderBy: { categoryKey: "asc" } });
+  const rows = await prisma.taskCategory.findMany({ where: { isActive: true }, orderBy: { categoryKey: "asc" } });
   return rows.map((c) => ({ id: c.id, categoryKey: c.categoryKey }));
 }
 

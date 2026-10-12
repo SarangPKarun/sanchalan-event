@@ -96,6 +96,7 @@ async function markReverificationIfNeeded(
 
 export async function listVendorCategories() {
   const categories = await prisma.vendorCategory.findMany({
+    where: { isActive: true },
     orderBy: { categoryKey: "asc" },
     select: { id: true, categoryKey: true, label: true },
   });
@@ -142,6 +143,9 @@ export async function setCategories(vendorId: string, input: SetVendorCategories
       throw new AppError(400, "Unknown vendor category");
 
     const before = new Set(current.vendorVendorCategories.map((c) => c.vendorCategoryId));
+    // A retired category cannot be newly chosen, but a vendor who already has it may keep it.
+    if (categories.some((c) => !c.isActive && !before.has(c.id)))
+      throw new AppError(400, "This category is no longer available");
     const after = new Set(categories.map((c) => c.id));
     const changed = before.size !== after.size || [...after].some((id) => !before.has(id));
 

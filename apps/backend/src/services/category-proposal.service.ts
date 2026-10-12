@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma.js";
 import { AppError } from "../lib/errors.js";
 import { audit } from "../lib/audit.js";
 import { VENDOR_MAX_CATEGORIES } from "../lib/vendor-limits.js";
+import type { ListProposalsQuery } from "../schemas/admin-list.schema.js";
 import type {
   ApproveProposalInput,
   ProposeCategoryInput,
@@ -93,13 +94,31 @@ const ADMIN_INCLUDE = {
   resolvedCategory: { select: { id: true, categoryKey: true, label: true } },
 } satisfies Prisma.CategoryProposalInclude;
 
-export async function listProposals(status?: Prisma.CategoryProposalWhereInput["status"]) {
-  const proposals = await prisma.categoryProposal.findMany({
-    where: status ? { status } : {},
-    include: ADMIN_INCLUDE,
-    orderBy: { submittedAt: status === "pending" ? "asc" : "desc" },
-  });
-  return { proposals };
+export async function listProposals(f: ListProposalsQuery) {
+  const where: Prisma.CategoryProposalWhereInput = {
+    ...(f.status ? { status: f.status } : {}),
+    ...(f.q
+      ? { OR: [{ label: { contains: f.q, mode: "insensitive" } }, { categoryKey: { contains: f.q, mode: "insensitive" } }] }
+      : {}),
+  };
+  const [total, proposals] = await Promise.all([
+    prisma.categoryProposal.count({ where }),
+    prisma.categoryProposal.findMany({
+      where,
+      include: ADMIN_INCLUDE,
+      orderBy: [{ submittedAt: f.status === "pending" ? "asc" : "desc" }, { id: "asc" }],
+      skip: (f.page - 1) * f.pageSize,
+      take: f.pageSize,
+    }),
+  ]);
+  return { proposals, total, page: f.page, pageSize: f.pageSize };
+}
+
+export async function proposalStatusCounts() {
+  const rows = await prisma.categoryProposal.groupBy({ by: ["status"], _count: true });
+  const counts = { pending: 0, approved: 0, rejected: 0, merged: 0 };
+  for (const r of rows) counts[r.status] = r._count;
+  return counts;
 }
 
 export async function getProposal(id: string) {
@@ -157,6 +176,12 @@ export async function approveProposal(id: string, adminId: string, input: Approv
       throw new AppError(409, "A category with this key already exists. Merge instead.");
 
     const keys = input.templates.map((t) => t.taskKey);
+    const known = new Set([
+      ...(await tx.taskTemplate.findMany({ select: { taskKey: true } })).map((t) => t.taskKey),
+      ...keys,
+    ]);
+    const missing = input.templates.flatMap((t) => t.defaultDependencyKeys).filter((k) => !known.has(k));
+    if (missing.length) throw new AppError(400, `Unknown dependency task key(s): ${missing.join(", ")}`);
     const clash = await tx.taskTemplate.findFirst({ where: { taskKey: { in: keys } } });
     if (clash || new Set(keys).size !== keys.length)
       throw new AppError(400, "Template task keys must be unique across all templates");

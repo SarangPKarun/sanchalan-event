@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
+import { bulkVendorSchema, listVendorsQuerySchema } from "../schemas/admin-list.schema.js";
 import {
-  listVendorsQuerySchema,
   rejectVendorSchema,
   suspendVendorSchema,
   vendorIdParamSchema,
@@ -9,8 +9,7 @@ import * as adminVendorService from "../services/admin-vendor.service.js";
 
 export async function listVendorsHandler(req: Request, res: Response, next: NextFunction) {
   try {
-    const { status } = listVendorsQuerySchema.parse(req.query);
-    res.status(200).json({ vendors: await adminVendorService.listVendors(status) });
+    res.status(200).json(await adminVendorService.listVendors(listVendorsQuerySchema.parse(req.query)));
   } catch (err) {
     next(err);
   }
@@ -58,6 +57,14 @@ export async function unsuspendVendorHandler(req: Request, res: Response, next: 
   try {
     const { id } = vendorIdParamSchema.parse(req.params);
     res.status(200).json(await adminVendorService.unsuspendVendor(id, req.auth!.userId));
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function bulkVendorsHandler(req: Request, res: Response, next: NextFunction) {
+  try {
+    res.status(200).json({ results: await adminVendorService.bulkDecide(req.auth!.userId, bulkVendorSchema.parse(req.body)) });
   } catch (err) {
     next(err);
   }

@@ -4,6 +4,7 @@ import { listVendorCategoriesHandler } from "../controllers/vendor-self.controll
 import { adminLoginHandler, adminMeHandler } from "../controllers/admin-auth.controller.js";
 import {
   approveVendorHandler,
+  bulkVendorsHandler,
   getVendorHandler,
   listVendorsHandler,
   rejectVendorHandler,
@@ -25,6 +26,16 @@ import {
   resetPasswordHandler,
   updateAdminHandler,
 } from "../controllers/admin-team.controller.js";
+import {
+  createTemplateHandler,
+  deleteTemplateHandler,
+  draftTemplatesHandler,
+  listCategoriesHandler,
+  listTemplatesHandler,
+  statsHandler,
+  updateCategoryHandler,
+  updateTemplateHandler,
+} from "../controllers/admin-catalog.controller.js";
 
 export const adminRouter: RouterType = Router();
 
@@ -39,7 +50,9 @@ adminRouter.get("/admins", requireAdminRole("super_admin"), listAdminsHandler);
 adminRouter.post("/admins", requireAdminRole("super_admin"), createAdminHandler);
 adminRouter.patch("/admins/:id", requireAdminRole("super_admin"), updateAdminHandler);
 adminRouter.post("/admins/:id/reset-password", requireAdminRole("super_admin"), resetPasswordHandler);
+adminRouter.get("/stats", statsHandler);
 adminRouter.get("/vendors", listVendorsHandler);
+adminRouter.post("/vendors/bulk", requireAdminRole("super_admin", "vendor_reviewer"), bulkVendorsHandler);
 adminRouter.get("/vendors/:id", getVendorHandler);
 adminRouter.post(
   "/vendors/:id/approve",
@@ -80,3 +93,12 @@ adminRouter.post(
   requireAdminRole("super_admin", "vendor_reviewer"),
   mergeProposalHandler
 );
+
+const catalogEditors = requireAdminRole("super_admin", "vendor_reviewer");
+adminRouter.get("/categories", listCategoriesHandler);
+adminRouter.patch("/categories/:key", catalogEditors, updateCategoryHandler);
+adminRouter.get("/task-templates", listTemplatesHandler);
+adminRouter.post("/task-templates", catalogEditors, createTemplateHandler);
+adminRouter.patch("/task-templates/:id", catalogEditors, updateTemplateHandler);
+adminRouter.delete("/task-templates/:id", catalogEditors, deleteTemplateHandler);
+adminRouter.post("/category-proposals/:id/draft-templates", catalogEditors, draftTemplatesHandler);
