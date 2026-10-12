@@ -17,6 +17,14 @@ import {
   mergeProposalHandler,
   rejectProposalHandler,
 } from "../controllers/category-proposal.controller.js";
+import {
+  changePasswordHandler,
+  createAdminHandler,
+  listAdminsHandler,
+  logoutAllHandler,
+  resetPasswordHandler,
+  updateAdminHandler,
+} from "../controllers/admin-team.controller.js";
 
 export const adminRouter: RouterType = Router();
 
@@ -24,6 +32,13 @@ adminRouter.post("/auth/login", adminLoginHandler);
 
 adminRouter.use(requireAuth, requireRole("admin"), requireActiveAdmin);
 adminRouter.get("/me", adminMeHandler);
+adminRouter.post("/me/password", changePasswordHandler);
+adminRouter.post("/me/logout-all", logoutAllHandler);
+
+adminRouter.get("/admins", requireAdminRole("super_admin"), listAdminsHandler);
+adminRouter.post("/admins", requireAdminRole("super_admin"), createAdminHandler);
+adminRouter.patch("/admins/:id", requireAdminRole("super_admin"), updateAdminHandler);
+adminRouter.post("/admins/:id/reset-password", requireAdminRole("super_admin"), resetPasswordHandler);
 adminRouter.get("/vendors", listVendorsHandler);
 adminRouter.get("/vendors/:id", getVendorHandler);
 adminRouter.post(

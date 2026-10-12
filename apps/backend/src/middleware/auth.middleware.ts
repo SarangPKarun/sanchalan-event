@@ -42,6 +42,8 @@ export function requireAdminRole(...roles: AdminRole[]) {
   };
 }
 
+const PASSWORD_CHANGE_ALLOWED = new Set(["GET /me", "POST /me/password", "POST /me/logout-all"]);
+
 /**
  * For admin routes: re-reads the admin so a disabled account or a changed role takes effect
  * immediately instead of when the 15-minute access token expires.
@@ -50,13 +52,18 @@ export async function requireActiveAdmin(req: Request, res: Response, next: Next
   try {
     const admin = await prisma.admin.findUnique({
       where: { id: req.auth!.userId },
-      select: { role: true, status: true },
+      select: { role: true, status: true, mustChangePassword: true },
     });
     if (!admin || admin.status !== "active") {
       res.status(401).json({ error: "Invalid or expired token" });
       return;
     }
     req.auth!.adminRole = admin.role;
+    // A temporary password must be replaced before anything else is allowed.
+    if (admin.mustChangePassword && !PASSWORD_CHANGE_ALLOWED.has(`${req.method} ${req.path}`)) {
+      res.status(403).json({ error: "Password change required", code: "password_change_required" });
+      return;
+    }
     next();
   } catch (err) {
     next(err);
