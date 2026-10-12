@@ -207,6 +207,11 @@ All routes require a bearer token except `/auth/*` and `/admin/auth/login`. Ther
 - Roadmap: `GET /admin/roadmap-logs`, `/:id` and `GET /admin/task-edit-stats`. Each generation records status, attempts, latency and tokens; failed generations are kept with the model's replies and the validation error. The feedback tab shows which template tasks families edit or remove most.
 - Audit log (super admin): `GET /admin/audit-logs` with filters, and `GET /admin/audit-logs.csv`, which prefixes cells starting with `=`, `+`, `-` or `@` so spreadsheets do not run them.
 
+### Admin bookings, payments and reviews
+- `GET /admin/bookings` (`status`, `q`, `page`), `/:id`, and `GET /admin/payments` (`status`: overdue, pending, paid) are read-only. "Overdue" is derived: unpaid and past its due date. Admins cannot change a booking or move money.
+- Reviews have a `status` (`visible`, `flagged`, `hidden`). `GET /admin/reviews` filters by status, rating and text; `POST /admin/reviews/:id/hide` (reason required) and `/restore` are limited to `super_admin` and `vendor_reviewer`, apply once each (a second attempt is 409) and are audited.
+- Bookings, payments and client reviews are not built into the app yet, so these screens show an explanatory empty state until they are. Hiding a review has no effect on families yet because nothing shows reviews to them.
+
 ### Admin catalog
 - `GET /admin/vendors` takes `status`, `q`, `category`, `priceTier`, `sort`, `page`, `pageSize` and returns `{vendors, total, page, pageSize}`; `GET /admin/category-proposals` takes `status`, `q`, `page`. `POST /admin/vendors/bulk` approves or rejects up to 50 vendors. `GET /admin/stats` returns counts.
 - `GET /admin/categories`, `PATCH /admin/categories/:key` (label, event types, `isActive`). A retired category disappears from the vendor picker and from roadmap generation; vendors who already have it keep it.

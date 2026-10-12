@@ -12,6 +12,10 @@ import { RoadmapPage } from "./pages/RoadmapPage.tsx";
 import { RoadmapLogPage } from "./pages/RoadmapLogPage.tsx";
 import { TemplateFeedbackPage } from "./pages/TemplateFeedbackPage.tsx";
 import { AuditPage } from "./pages/AuditPage.tsx";
+import { BookingsPage } from "./pages/BookingsPage.tsx";
+import { BookingDetailPage } from "./pages/BookingDetailPage.tsx";
+import { PaymentsPage } from "./pages/PaymentsPage.tsx";
+import { ReviewsPage } from "./pages/ReviewsPage.tsx";
 import { NotFoundPage } from "./pages/NotFoundPage.tsx";
 import { VendorQueuePage } from "./pages/VendorQueuePage.tsx";
 import { VendorDetailPage } from "./pages/VendorDetailPage.tsx";
@@ -33,6 +37,10 @@ export function App() {
         <Route path="/roadmap" element={<RoadmapPage />} />
         <Route path="/roadmap/feedback" element={<TemplateFeedbackPage />} />
         <Route path="/roadmap/:id" element={<RoadmapLogPage />} />
+        <Route path="/bookings" element={<BookingsPage />} />
+        <Route path="/bookings/payments" element={<PaymentsPage />} />
+        <Route path="/bookings/:id" element={<BookingDetailPage />} />
+        <Route path="/reviews" element={<ReviewsPage />} />
         <Route path="/audit" element={<AuditPage />} />
         <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/categories/proposals" element={<CategoryProposalsPage />} />

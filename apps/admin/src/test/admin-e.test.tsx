@@ -18,6 +18,7 @@ const STATS = {
   organizers: 40,
   events: 25,
   roadmaps: { lastSevenDays: 6, total: 30, failedLastSevenDays: 2, tokensLastThirtyDays: { input: 12000, output: 8000 } },
+  commerce: { bookings: 0, overduePayments: 0, flaggedReviews: 0 },
   oldestPending: { vendor: { id: "v1", businessName: "Old Vendor", submittedAt: new Date(Date.now() - 3 * 86400000).toISOString() }, proposal: null },
 };
 const ORGANIZER = {

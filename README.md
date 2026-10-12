@@ -134,6 +134,11 @@ suspended vendors) actions. These actions are restricted to the `super_admin`
 and `vendor_reviewer` admin roles — a `support` admin can view the queue but
 not act on it. Approve/Reject only work on vendors that are pending review.
 
+Beyond the vendor queue the portal has a dashboard, category and starter-task management,
+read-only views of families, events, bookings and payments, the roadmap generation log, review
+moderation, an audit log, and (for super admins) team management. The seeded admin must change its
+password at first sign-in. See `spec.md` §7 and the admin sections for details.
+
 ## Vendor onboarding flow
 
 A vendor logs in with their phone number (choose **I'm a Vendor**), which

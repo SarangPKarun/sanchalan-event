@@ -12,6 +12,7 @@ interface Stats {
   organizers: number;
   events: number;
   roadmaps: { lastSevenDays: number; total: number; failedLastSevenDays: number; tokensLastThirtyDays: { input: number; output: number } };
+  commerce: { bookings: number; overduePayments: number; flaggedReviews: number };
   oldestPending: { vendor: { id: string; businessName: string | null; submittedAt: string | null } | null; proposal: { id: string; label: string; submittedAt: string } | null };
 }
 
@@ -65,6 +66,12 @@ export function DashboardPage() {
               value={s.roadmaps.failedLastSevenDays}
               warn={s.roadmaps.failedLastSevenDays > 0}
             />
+            {s.commerce.overduePayments > 0 && (
+              <Card to="/bookings/payments?status=overdue" label="Overdue payments" value={s.commerce.overduePayments} warn />
+            )}
+            {s.commerce.flaggedReviews > 0 && (
+              <Card to="/reviews?status=flagged" label="Flagged reviews" value={s.commerce.flaggedReviews} warn />
+            )}
           </div>
 
           <h2 className="section-gap">Platform</h2>

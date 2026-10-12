@@ -9,6 +9,8 @@ const NAV: { to: string; label: string; end?: boolean; needs?: "team.manage" | "
   { to: "/families", label: "Families" },
   { to: "/events", label: "Events" },
   { to: "/roadmap", label: "Roadmap" },
+  { to: "/bookings", label: "Bookings" },
+  { to: "/reviews", label: "Reviews" },
   { to: "/audit", label: "Audit", needs: "audit.read" },
   { to: "/team", label: "Team", needs: "team.manage" },
   { to: "/account", label: "Account" },
