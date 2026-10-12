@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { vendorCategoryLabel } from "@sanchalan/shared-types";
 import { api } from "../lib/api.ts";
 import { useAuth } from "../lib/auth-context.tsx";
-import { errorMessage as apiError, formatDate } from "../lib/format.ts";
+import { errorMessage, formatDate } from "../lib/format.ts";
 import { useToast } from "../lib/toast.tsx";
-import { Tabs } from "../components/Tabs.tsx";
+import { CategoriesNav } from "../components/CategoriesNav.tsx";
 import { ErrorRetry } from "../components/ErrorRetry.tsx";
+import { EventTypePicker } from "../components/EventTypePicker.tsx";
+import { Pagination } from "../components/Pagination.tsx";
+import { SearchBox } from "../components/SearchBox.tsx";
 import { StatusBadge } from "../components/StatusBadge.tsx";
+import { Tabs } from "../components/Tabs.tsx";
+import { TemplateFields, blankTemplate, templatePayload, templateValid, type TemplateDraft } from "../components/TemplateFields.tsx";
 import { usePageTitle } from "../components/usePageTitle.ts";
+import { categoryName, type CategoryRow } from "./CategoriesPage.tsx";
 
 type Status = "pending" | "approved" | "rejected" | "merged";
 
@@ -24,18 +29,6 @@ interface Proposal {
   resolvedCategory: { categoryKey: string; label: string | null } | null;
 }
 
-interface Category {
-  id: string;
-  categoryKey: string;
-  label: string | null;
-}
-
-interface TemplateDraft {
-  taskKey: string;
-  defaultNameEn: string;
-  defaultLeadTimeDays: string;
-}
-
 const TABS: { label: string; value: Status }[] = [
   { label: "Pending", value: "pending" },
   { label: "Approved", value: "approved" },
@@ -43,55 +36,50 @@ const TABS: { label: string; value: Status }[] = [
   { label: "Rejected", value: "rejected" },
 ];
 
-function blankTemplate(key: string): TemplateDraft {
-  return { taskKey: `book_${key}`, defaultNameEn: "", defaultLeadTimeDays: "60" };
-}
-
-function ProposalCard({
-  proposal,
-  categories,
-  onDone,
-}: {
-  proposal: Proposal;
-  categories: Category[];
-  onDone: () => void;
-}) {
+function ProposalCard({ proposal, categories, onDone }: { proposal: Proposal; categories: CategoryRow[]; onDone: () => void }) {
   const { can } = useAuth();
   const toast = useToast();
   const canReview = can("category.review");
   const [mode, setMode] = useState<"approve" | "reject" | "merge" | null>(null);
   const [label, setLabel] = useState(proposal.label);
+  const [types, setTypes] = useState<string[]>(["wedding"]);
   const [templates, setTemplates] = useState<TemplateDraft[]>([blankTemplate(proposal.categoryKey)]);
   const [reason, setReason] = useState("");
-  const [mergeId, setMergeId] = useState("");
+  const [mergeKey, setMergeKey] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [drafting, setDrafting] = useState(false);
 
   async function run(path: string, body: object) {
     setBusy(true);
-    setError(null);
     try {
       await api.post(`/admin/category-proposals/${proposal.id}/${path}`, body);
       toast.success(`Proposal ${path === "approve" ? "approved" : path === "merge" ? "merged" : "rejected"}.`);
       onDone();
     } catch (err) {
-      setError(apiError(err, `Failed to ${path}.`));
+      toast.error(errorMessage(err, `Failed to ${path}.`));
     } finally {
       setBusy(false);
     }
   }
 
-  const templatesValid = templates.every(
-    (t) =>
-      /^[a-z0-9_]+$/.test(t.taskKey) &&
-      t.defaultNameEn.trim() &&
-      Number.isInteger(Number(t.defaultLeadTimeDays)) &&
-      Number(t.defaultLeadTimeDays) >= 0
-  );
-
-  function updateTemplate(i: number, patch: Partial<TemplateDraft>) {
-    setTemplates((ts) => ts.map((t, j) => (j === i ? { ...t, ...patch } : t)));
+  async function draft() {
+    setDrafting(true);
+    try {
+      const { data } = await api.post<{ templates: { taskKey: string; defaultNameEn: string; defaultLeadTimeDays: number; typicalOwnerType: TemplateDraft["typicalOwnerType"] }[] }>(
+        `/admin/category-proposals/${proposal.id}/draft-templates`
+      );
+      setTemplates(data.templates.map((t) => ({ ...t, defaultLeadTimeDays: String(t.defaultLeadTimeDays), dependencies: "" })));
+      toast.success("Draft ready. Review and edit before approving.");
+    } catch (err) {
+      toast.error(errorMessage(err, "The AI draft failed."));
+    } finally {
+      setDrafting(false);
+    }
   }
+
+  const update = (i: number, patch: Partial<TemplateDraft>) => setTemplates((ts) => ts.map((t, j) => (j === i ? { ...t, ...patch } : t)));
+  const mergeTarget = categories.find((c) => c.categoryKey === mergeKey);
+  const approvable = label.trim().length >= 3 && types.length > 0 && templates.every(templateValid);
 
   return (
     <li className="card">
@@ -111,17 +99,15 @@ function ProposalCard({
       {proposal.resolvedCategory && (
         <p>
           → {proposal.status === "merged" ? "merged into" : "created"}{" "}
-          {proposal.resolvedCategory.label ?? vendorCategoryLabel(proposal.resolvedCategory.categoryKey)}
+          <Link to={`/categories/${proposal.resolvedCategory.categoryKey}`}>{categoryName(proposal.resolvedCategory)}</Link>
         </p>
       )}
 
       {proposal.status === "pending" && mode === null && canReview && (
         <div className="review-actions">
-          <button onClick={() => setMode("approve")}>Approve…</button>
-          <button onClick={() => setMode("merge")}>Merge into existing…</button>
-          <button className="danger" onClick={() => setMode("reject")}>
-            Reject…
-          </button>
+          <button type="button" onClick={() => setMode("approve")}>Approve…</button>
+          <button type="button" className="secondary" onClick={() => setMode("merge")}>Merge into existing…</button>
+          <button type="button" className="danger" onClick={() => setMode("reject")}>Reject…</button>
         </div>
       )}
 
@@ -129,68 +115,42 @@ function ProposalCard({
         <div className="reject-form">
           <label>
             Category name
-            <input value={label} onChange={(e) => setLabel(e.target.value)} />
+            <input value={label} onChange={(e) => setLabel(e.target.value)} maxLength={40} />
           </label>
-          <p>Starter tasks for the roadmap (at least one):</p>
+          <EventTypePicker value={types} onChange={setTypes} />
+          <div className="page-header">
+            <strong>Starter tasks for the roadmap</strong>
+            <button type="button" className="secondary" disabled={drafting} onClick={() => void draft()}>
+              {drafting ? "Drafting…" : "Draft with AI"}
+            </button>
+          </div>
           {templates.map((t, i) => (
-            <div key={i} className="review-actions">
-              <label>
-                Task key
-              <input
-                placeholder="task_key"
-                value={t.taskKey}
-                onChange={(e) => updateTemplate(i, { taskKey: e.target.value })}
-              />
-              </label>
-              <label>
-                Task name
-              <input
-                placeholder="Task name"
-                value={t.defaultNameEn}
-                onChange={(e) => updateTemplate(i, { defaultNameEn: e.target.value })}
-              />
-              </label>
-              <label>
-                Lead time (days)
-              <input
-                type="number"
-                min={0}
-                title="Lead time (days before event)"
-                value={t.defaultLeadTimeDays}
-                onChange={(e) => updateTemplate(i, { defaultLeadTimeDays: e.target.value })}
-              />
-              </label>
+            <div key={i} className="card">
+              <TemplateFields value={t} onChange={(patch) => update(i, patch)} />
               {templates.length > 1 && (
-                <button type="button" className="secondary" onClick={() => setTemplates((ts) => ts.filter((_, j) => j !== i))}>Remove</button>
+                <button type="button" className="secondary" onClick={() => setTemplates((ts) => ts.filter((_, j) => j !== i))}>
+                  Remove task
+                </button>
               )}
             </div>
           ))}
           <div className="review-actions">
-            <button
-              onClick={() =>
-                setTemplates((ts) => [...ts, blankTemplate(`${proposal.categoryKey}_${ts.length + 1}`)])
-              }
-            >
+            <button type="button" className="secondary" onClick={() => setTemplates((ts) => [...ts, blankTemplate(`${proposal.categoryKey}_${ts.length + 1}`)])}>
               Add task
             </button>
             <button
-              disabled={busy || label.trim().length < 3 || !templatesValid}
-              onClick={() =>
-                run("approve", {
-                  label: label.trim(),
-                  applicableEventTypes: ["wedding"],
-                  templates: templates.map((t) => ({
-                    taskKey: t.taskKey,
-                    defaultNameEn: t.defaultNameEn.trim(),
-                    defaultLeadTimeDays: Number(t.defaultLeadTimeDays),
-                  })),
-                })
-              }
+              type="button"
+              disabled={busy || !approvable}
+              onClick={() => void run("approve", { label: label.trim(), applicableEventTypes: types, templates: templates.map(templatePayload) })}
             >
               Confirm approve
             </button>
             <button type="button" className="secondary" onClick={() => setMode(null)}>Cancel</button>
           </div>
+          <p className="muted">
+            Approving creates a global category for every vendor and family, and assigns it to {proposal.vendors.length} requesting vendor
+            {proposal.vendors.length === 1 ? "" : "s"}.
+          </p>
         </div>
       )}
 
@@ -198,17 +158,25 @@ function ProposalCard({
         <div className="reject-form">
           <label>
             Existing category
-            <select value={mergeId} onChange={(e) => setMergeId(e.target.value)}>
+            <select value={mergeKey} onChange={(e) => setMergeKey(e.target.value)}>
               <option value="">Select…</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label ?? vendorCategoryLabel(c.categoryKey)}
-                </option>
+              {categories.filter((c) => c.vendorCategoryId && c.isActive).map((c) => (
+                <option key={c.categoryKey} value={c.categoryKey}>{categoryName(c)}</option>
               ))}
             </select>
           </label>
+          {mergeTarget && (
+            <p className="muted">
+              {proposal.vendors.length} vendor{proposal.vendors.length === 1 ? "" : "s"} will be added to “{categoryName(mergeTarget)}”, which has{" "}
+              {mergeTarget.vendorCount} vendor{mergeTarget.vendorCount === 1 ? "" : "s"} now. No new category is created.
+            </p>
+          )}
           <div className="review-actions">
-            <button disabled={busy || !mergeId} onClick={() => run("merge", { vendorCategoryId: mergeId })}>
+            <button
+              type="button"
+              disabled={busy || !mergeTarget}
+              onClick={() => void run("merge", { vendorCategoryId: mergeTarget!.vendorCategoryId })}
+            >
               Confirm merge
             </button>
             <button type="button" className="secondary" onClick={() => setMode(null)}>Cancel</button>
@@ -219,50 +187,72 @@ function ProposalCard({
       {mode === "reject" && (
         <div className="reject-form">
           <label>
-            Reason for rejection
-            <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} />
+            Reason for rejection (shown to the vendor)
+            <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} maxLength={1000} />
           </label>
           <div className="review-actions">
-            <button
-              className="danger"
-              disabled={busy || !reason.trim()}
-              onClick={() => run("reject", { reason: reason.trim() })}
-            >
+            <button type="button" className="danger" disabled={busy || !reason.trim()} onClick={() => void run("reject", { reason: reason.trim() })}>
               Confirm reject
             </button>
             <button type="button" className="secondary" onClick={() => setMode(null)}>Cancel</button>
           </div>
         </div>
       )}
-
-      {error && <p className="error-text">{error}</p>}
     </li>
   );
 }
 
 export function CategoryProposalsPage() {
-  usePageTitle("Categories");
+  usePageTitle("Category proposals");
   const [params, setParams] = useSearchParams();
   const requested = params.get("status") as Status | null;
   const tab: Status = TABS.some((t) => t.value === requested) ? requested! : "pending";
+  const q = params.get("q") ?? "";
+  const page = Math.max(1, Number(params.get("page")) || 1);
+
   const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [total, setTotal] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
+  const [counts, setCounts] = useState<Record<string, number> | null>(null);
   const [state, setState] = useState<"loading" | "error" | "ready">("loading");
 
-  const load = useCallback(async (silent = false) => {
-    if (!silent) setState("loading");
-    try {
-      const [p, c] = await Promise.all([
-        api.get<{ proposals: Proposal[] }>("/admin/category-proposals", { params: { status: tab } }),
-        api.get<{ categories: Category[] }>("/admin/vendor-categories"),
-      ]);
-      setProposals(p.data.proposals);
-      setCategories(c.data.categories);
-      setState("ready");
-    } catch {
-      setState("error");
-    }
-  }, [tab]);
+  const update = useCallback(
+    (patch: Record<string, string | null>) =>
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          for (const [k, v] of Object.entries(patch)) (v ? next.set(k, v) : next.delete(k));
+          if (!("page" in patch)) next.delete("page");
+          return next;
+        },
+        { replace: true }
+      ),
+    [setParams]
+  );
+  const onSearch = useCallback((v: string) => update({ q: v || null }), [update]);
+
+  const load = useCallback(
+    async (silent = false) => {
+      if (!silent) setState("loading");
+      try {
+        const [p, c, s] = await Promise.all([
+          api.get<{ proposals: Proposal[]; total: number; pageSize: number }>("/admin/category-proposals", { params: { status: tab, q, page } }),
+          api.get<{ categories: CategoryRow[] }>("/admin/categories"),
+          api.get<{ proposals: Record<string, number> }>("/admin/stats"),
+        ]);
+        setProposals(p.data.proposals);
+        setTotal(p.data.total);
+        setPageSize(p.data.pageSize);
+        setCategories(c.data.categories);
+        setCounts(s.data.proposals);
+        setState("ready");
+      } catch {
+        setState("error");
+      }
+    },
+    [tab, q, page]
+  );
 
   useEffect(() => {
     void load();
@@ -271,10 +261,19 @@ export function CategoryProposalsPage() {
   return (
     <div className="page">
       <header className="page-header">
-        <h1>Category proposals</h1>
+        <h1>Categories</h1>
       </header>
+      <CategoriesNav pending={counts?.["pending"]} />
 
-      <Tabs label="Proposal status" tabs={TABS} value={tab} onChange={(v) => setParams({ status: v }, { replace: true })} />
+      <Tabs
+        label="Proposal status"
+        tabs={TABS.map((t) => ({ ...t, count: counts?.[t.value] }))}
+        value={tab}
+        onChange={(v) => update({ status: v })}
+      />
+      <div className="filters">
+        <SearchBox value={q} onSearch={onSearch} label="Search proposals" placeholder="Search proposals" />
+      </div>
 
       {state === "loading" && <p className="page-status">Loading…</p>}
       {state === "error" && <ErrorRetry message="Failed to load proposals." onRetry={() => void load()} />}
@@ -285,6 +284,7 @@ export function CategoryProposalsPage() {
           <ProposalCard key={p.id} proposal={p} categories={categories} onDone={() => void load(true)} />
         ))}
       </ul>
+      <Pagination page={page} pageSize={pageSize} total={total} onChange={(n) => update({ page: n > 1 ? String(n) : null })} />
     </div>
   );
 }

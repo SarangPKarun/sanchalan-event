@@ -193,11 +193,18 @@ All routes require a bearer token except `/auth/*` and `/admin/auth/login`. Ther
 ### Admin web (`apps/admin/src`)
 - `/login`: email and password. Five wrong passwords lock the account for 15 minutes (429), with a per-IP limit on top.
 - Everything else sits inside a shell (`components/Layout.tsx`) with the admin's name and role, role-aware navigation, skip link and logout. Unknown paths show a 404 page.
-- `/vendors`: queue with tabs for pending review, published, rejected, suspended and drafts (the tab is kept in the URL).
+- `/vendors`: queue with tabs (with counts) for pending review, published, rejected, suspended and drafts. Search, category, tier and sort filters and pagination are all kept in the URL. Reviewers can select several pending vendors and approve or reject them together; each is decided on its own and failures are reported.
 - `/vendors/:id`: detail with approve, reject (reason), suspend (reason) and unsuspend, each behind a confirmation dialog. Support admins see no action buttons.
-- `/categories`: category proposal queue (approve with starter tasks, merge, reject).
+- `/categories`: all categories with vendor and starter-task counts; retire or restore a category. `/categories/:key` edits the display name and event types and manages the category's starter tasks (add, edit, delete). `/categories/proposals`: the proposal queue (approve with starter tasks, optionally drafted by AI; merge with a preview; reject).
 - `/team` (super admin): add admins, change roles, disable/enable, reset passwords (a temporary password is shown once).
 - `/account`: change password, log out everywhere. A temporary password forces this page first.
+
+### Admin catalog
+- `GET /admin/vendors` takes `status`, `q`, `category`, `priceTier`, `sort`, `page`, `pageSize` and returns `{vendors, total, page, pageSize}`; `GET /admin/category-proposals` takes `status`, `q`, `page`. `POST /admin/vendors/bulk` approves or rejects up to 50 vendors. `GET /admin/stats` returns counts.
+- `GET /admin/categories`, `PATCH /admin/categories/:key` (label, event types, `isActive`). A retired category disappears from the vendor picker and from roadmap generation; vendors who already have it keep it.
+- `GET/POST /admin/task-templates`, `PATCH/DELETE /admin/task-templates/:id`. Task keys are unique; dependencies must exist and cannot form a loop; a task that others depend on cannot be deleted or renamed; each edit bumps `version`.
+- `POST /admin/category-proposals/:id/draft-templates` asks the configured LLM for starter tasks. The admin edits them before saving; nothing is stored by this call.
+- Editing is limited to `super_admin` and `vendor_reviewer`.
 
 ### Admin accounts and security
 - `GET /admin/me`, `POST /admin/me/password`, `POST /admin/me/logout-all`; `GET/POST /admin/admins`, `PATCH /admin/admins/:id`, `POST /admin/admins/:id/reset-password` (super admin only).

@@ -21,6 +21,7 @@ export async function listCategories() {
   ]);
   const byKey = new Map<string, {
     categoryKey: string;
+    vendorCategoryId: string | null;
     label: string | null;
     isActive: boolean;
     applicableEventTypes: EventType[];
@@ -30,6 +31,7 @@ export async function listCategories() {
   for (const v of vendor)
     byKey.set(v.categoryKey, {
       categoryKey: v.categoryKey,
+      vendorCategoryId: v.id,
       label: v.label,
       isActive: v.isActive,
       applicableEventTypes: v.applicableEventTypes,
@@ -45,6 +47,7 @@ export async function listCategories() {
     } else
       byKey.set(t.categoryKey, {
         categoryKey: t.categoryKey,
+        vendorCategoryId: null,
         label: t.label,
         isActive: t.isActive,
         applicableEventTypes: t.applicableEventTypes,
