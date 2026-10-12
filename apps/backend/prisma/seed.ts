@@ -280,6 +280,7 @@ async function seedAdmin(): Promise<void> {
       email: SEED_ADMIN_EMAIL,
       passwordHash,
       role: "super_admin",
+      mustChangePassword: true,
     },
   });
 

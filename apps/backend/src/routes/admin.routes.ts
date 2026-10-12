@@ -1,7 +1,7 @@
 import { Router, type Router as RouterType } from "express";
-import { requireAdminRole, requireAuth, requireRole } from "../middleware/auth.middleware.js";
+import { requireActiveAdmin, requireAdminRole, requireAuth, requireRole } from "../middleware/auth.middleware.js";
 import { listVendorCategoriesHandler } from "../controllers/vendor-self.controller.js";
-import { adminLoginHandler } from "../controllers/admin-auth.controller.js";
+import { adminLoginHandler, adminMeHandler } from "../controllers/admin-auth.controller.js";
 import {
   approveVendorHandler,
   getVendorHandler,
@@ -22,7 +22,8 @@ export const adminRouter: RouterType = Router();
 
 adminRouter.post("/auth/login", adminLoginHandler);
 
-adminRouter.use(requireAuth, requireRole("admin"));
+adminRouter.use(requireAuth, requireRole("admin"), requireActiveAdmin);
+adminRouter.get("/me", adminMeHandler);
 adminRouter.get("/vendors", listVendorsHandler);
 adminRouter.get("/vendors/:id", getVendorHandler);
 adminRouter.post(

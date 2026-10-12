@@ -8,6 +8,7 @@ import { AppError } from "../lib/errors.js";
 import {
   signAccessToken,
   signRefreshToken,
+  refreshTokenExpiry,
   verifyRefreshToken,
   decodeRefreshTokenForRevocation,
 } from "../lib/jwt.js";
@@ -75,7 +76,7 @@ export async function verifyOtp(phoneNumber: string, otp: string, role: AuthRole
   const accessToken = signAccessToken({ sub: userId, role });
   const { token: refreshToken, jti } = signRefreshToken({ sub: userId, role });
   const tokenHash = await hashRefreshToken(refreshToken);
-  const refreshExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  const refreshExpiresAt = refreshTokenExpiry(refreshToken);
 
   await prisma.refreshToken.create({
     data: { id: jti, tokenHash, userId, role, expiresAt: refreshExpiresAt },
@@ -121,7 +122,7 @@ export async function refreshAccessToken(refreshToken: string) {
   let adminRole: AdminRole | undefined;
   if (role === "admin") {
     const admin = await prisma.admin.findUnique({ where: { id: row.userId } });
-    if (!admin) throw new AppError(401, "Refresh token revoked or expired");
+    if (!admin || admin.status !== "active") throw new AppError(401, "Refresh token revoked or expired");
     adminRole = admin.role;
   }
 

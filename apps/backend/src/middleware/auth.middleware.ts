@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import type { AdminRole, AuthRole } from "@sanchalan/shared-types";
 import { verifyAccessToken } from "../lib/jwt.js";
+import { prisma } from "../lib/prisma.js";
 
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   const header = req.headers.authorization;
@@ -39,4 +40,25 @@ export function requireAdminRole(...roles: AdminRole[]) {
     }
     next();
   };
+}
+
+/**
+ * For admin routes: re-reads the admin so a disabled account or a changed role takes effect
+ * immediately instead of when the 15-minute access token expires.
+ */
+export async function requireActiveAdmin(req: Request, res: Response, next: NextFunction) {
+  try {
+    const admin = await prisma.admin.findUnique({
+      where: { id: req.auth!.userId },
+      select: { role: true, status: true },
+    });
+    if (!admin || admin.status !== "active") {
+      res.status(401).json({ error: "Invalid or expired token" });
+      return;
+    }
+    req.auth!.adminRole = admin.role;
+    next();
+  } catch (err) {
+    next(err);
+  }
 }

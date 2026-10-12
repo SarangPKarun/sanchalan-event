@@ -46,3 +46,10 @@ export function decodeRefreshTokenForRevocation(token: string): RefreshTokenPayl
     ignoreExpiration: true,
   }) as unknown as RefreshTokenPayload;
 }
+
+/** Absolute expiry of a freshly signed refresh token, so the DB row follows JWT_REFRESH_EXPIRES_IN. */
+export function refreshTokenExpiry(token: string): Date {
+  const decoded = jwt.decode(token) as { exp?: number } | null;
+  if (!decoded?.exp) throw new Error("Refresh token has no expiry");
+  return new Date(decoded.exp * 1000);
+}

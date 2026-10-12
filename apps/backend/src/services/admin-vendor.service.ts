@@ -1,6 +1,7 @@
 import type { VendorReviewAction, VendorStatus } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../lib/errors.js";
+import { audit } from "../lib/audit.js";
 import { VENDOR_WITH_PORTFOLIO_INCLUDE } from "./vendor-query.helpers.js";
 
 export async function listVendors(status?: VendorStatus) {
@@ -63,6 +64,16 @@ async function transition(vendorId: string, adminId: string, t: Transition) {
     await tx.vendorReviewLog.create({
       data: { vendorId, adminId, action: t.action, ...(t.reason ? { reason: t.reason } : {}) },
     });
+    await audit(
+      {
+        adminId,
+        action: `vendor.${t.action}`,
+        entityType: "vendor",
+        entityId: vendorId,
+        ...(t.reason ? { metadata: { reason: t.reason } } : {}),
+      },
+      tx
+    );
     return tx.vendor.findUniqueOrThrow({ where: { id: vendorId } });
   });
 }

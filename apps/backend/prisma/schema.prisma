@@ -218,15 +218,45 @@ enum AdminRole {
   support
 }
 
+enum AdminStatus {
+  active
+  disabled
+}
+
+/// [ACTIVE] Append-only record of what each admin did (decisions, edits, team changes, logins).
+model AdminAuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  adminId    String?  @map("admin_id") @db.Uuid
+  action     String
+  entityType String?  @map("entity_type")
+  entityId   String?  @map("entity_id")
+  metadata   Json?
+  ip         String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  admin Admin? @relation(fields: [adminId], references: [id])
+
+  @@index([createdAt])
+  @@index([adminId, createdAt])
+  @@index([entityType, entityId])
+  @@map("admin_audit_logs")
+}
+
 /// [ACTIVE] Internal team — completely separate login system from organizers/vendors.
 model Admin {
-  id           String    @id @default(uuid()) @db.Uuid
-  name         String
-  email        String    @unique
-  passwordHash String    @map("password_hash")
-  role         AdminRole
-  createdAt    DateTime  @default(now()) @map("created_at")
+  id                 String      @id @default(uuid()) @db.Uuid
+  name               String
+  email              String      @unique
+  passwordHash       String      @map("password_hash")
+  role               AdminRole
+  status             AdminStatus @default(active)
+  mustChangePassword Boolean     @default(false) @map("must_change_password")
+  failedLogins       Int         @default(0) @map("failed_logins")
+  lockedUntil        DateTime?   @map("locked_until")
+  lastLoginAt        DateTime?   @map("last_login_at")
+  createdAt          DateTime    @default(now()) @map("created_at")
 
+  auditLogs         AdminAuditLog[]
   reviewedVendors   Vendor[]
   reviewLogs        VendorReviewLog[]
   reviewedProposals CategoryProposal[]

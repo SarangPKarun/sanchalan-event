@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { AppError } from "../lib/errors.js";
+import { audit } from "../lib/audit.js";
 import { VENDOR_MAX_CATEGORIES } from "../lib/vendor-limits.js";
 import type {
   ApproveProposalInput,
@@ -190,14 +191,19 @@ export async function approveProposal(id: string, adminId: string, input: Approv
       data: { label: input.label, resolvedVendorCategoryId: vendorCategory.id },
     });
     await assignVendors(tx, id, vendorCategory.id);
+    await audit(
+      { adminId, action: "category_proposal.approved", entityType: "category_proposal", entityId: id, metadata: { categoryKey: key } },
+      tx
+    );
   }, { timeout: 20_000 });
   return getProposal(id);
 }
 
 export async function rejectProposal(id: string, adminId: string, reason: string) {
-  await prisma.$transaction((tx) =>
-    claimPending(tx, id, adminId, { status: "rejected", rejectionReason: reason })
-  );
+  await prisma.$transaction(async (tx) => {
+    await claimPending(tx, id, adminId, { status: "rejected", rejectionReason: reason });
+    await audit({ adminId, action: "category_proposal.rejected", entityType: "category_proposal", entityId: id, metadata: { reason } }, tx);
+  });
   return getProposal(id);
 }
 
@@ -211,6 +217,7 @@ export async function mergeProposal(id: string, adminId: string, vendorCategoryI
       resolvedVendorCategoryId: vendorCategoryId,
     });
     await assignVendors(tx, id, vendorCategoryId);
+    await audit({ adminId, action: "category_proposal.merged", entityType: "category_proposal", entityId: id, metadata: { vendorCategoryId } }, tx);
   });
   return getProposal(id);
 }

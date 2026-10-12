@@ -29,3 +29,8 @@ const envSchema = z.object({
 });
 
 export const env = envSchema.parse(process.env);
+
+// A localhost-only CORS origin would silently lock the admin app out of a deployed API.
+if (env.NODE_ENV === "production" && !process.env["ADMIN_APP_ORIGIN"]) {
+  throw new Error("ADMIN_APP_ORIGIN must be set in production");
+}
