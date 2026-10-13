@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/providers.dart';
 import '../../models/enums.dart';
 import '../../models/event.dart';
+import '../../models/event_profile.dart';
 import '../../models/organizer.dart';
 import '../../models/roadmap.dart';
 
@@ -52,6 +53,17 @@ class OrganizerRepository {
   /// One event with sub-events, budget categories and tasks.
   Future<EventGroup> getEventGroup(String id) async =>
       EventGroup.fromJson(await _get('/event-groups/$id'));
+
+  /// The creation flow (questions) for every event type. Static on the server.
+  Future<List<EventTypeProfile>> listEventTypeProfiles() async {
+    final res = await _dio.get<List<dynamic>>('/event-types');
+    return _list(res.data).map(EventTypeProfile.fromJson).toList();
+  }
+
+  /// Asks the server (an LLM call) to write the questions for an event type we have no form for.
+  Future<GeneratedProfile> generateEventProfile(String description) async => GeneratedProfile.fromJson(
+        await _send('POST', '/event-types/generate', body: {'description': description}, options: _llmOptions),
+      );
 
   /// The server builds the budget categories with the LLM, so this is slow.
   Future<EventGroup> createEventGroup(CreateEventGroupBody body) async => EventGroup.fromJson(

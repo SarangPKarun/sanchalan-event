@@ -1,6 +1,13 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/local_cache.dart';
+import 'event_draft.dart';
+
 import '../../models/event.dart';
+import '../../models/event_profile.dart';
 import '../../models/organizer.dart';
 import '../../models/roadmap.dart';
 import 'organizer_repository.dart';
@@ -71,6 +78,45 @@ class OrganizerDataNotifier extends AsyncNotifier<OrganizerData> {
 
 final organizerDataProvider = AsyncNotifierProvider<OrganizerDataNotifier, OrganizerData>(
   OrganizerDataNotifier.new,
+  retry: _noRetry,
+);
+
+/// The creation questions for every event type. Fetched once and kept for the session.
+///
+/// Stale-while-revalidate: a copy saved on the device is returned at once (so the wizard
+/// opens with no wait, even offline) and refreshed in the background for next time.
+final eventProfilesProvider = FutureProvider<List<EventTypeProfile>>(
+  (ref) async {
+    const key = 'event_type_profiles_v1';
+    final cache = ref.watch(localCacheProvider);
+    final repo = ref.watch(organizerRepositoryProvider);
+
+    Future<List<EventTypeProfile>> fetch() async {
+      final profiles = await repo.listEventTypeProfiles();
+      await cache.write(key, jsonEncode(profiles.map((p) => p.toJson()).toList()));
+      return profiles;
+    }
+
+    final saved = await cache.read(key);
+    if (saved != null) {
+      try {
+        final cached = (jsonDecode(saved) as List)
+            .map((p) => EventTypeProfile.fromJson(p as Map<String, dynamic>))
+            .toList();
+        unawaited(fetch().then<void>((_) {}, onError: (_) {}));
+        return cached;
+      } catch (_) {
+        await cache.remove(key);
+      }
+    }
+    return fetch();
+  },
+  retry: _noRetry,
+);
+
+/// The saved half-finished event, if any (and not stale).
+final eventDraftProvider = FutureProvider.autoDispose<WizardDraft?>(
+  (ref) async => WizardDraft.decode(await ref.watch(localCacheProvider).read(WizardDraft.storageKey)),
   retry: _noRetry,
 );
 

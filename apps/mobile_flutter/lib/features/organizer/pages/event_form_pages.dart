@@ -2,48 +2,102 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/local_cache.dart';
 import '../../../core/router/paths.dart';
 import '../../../core/ui_feedback.dart';
 import '../../../models/converters.dart';
 import '../../../models/event.dart';
 import '../../../shared/widgets/error_retry.dart';
+import '../event_draft.dart';
 import '../event_form_view.dart';
+import '../event_wizard_view.dart';
 import '../organizer_providers.dart';
 import '../organizer_repository.dart';
 
 void _leave(BuildContext context, String fallback) => context.canPop() ? context.pop() : context.go(fallback);
 
-/// New event. The server builds the budget with the LLM, so this can take a minute.
+/// New event. A step-by-step wizard whose questions depend on the event type. If the
+/// questions cannot be loaded, falls back to the single-page form so creating an event
+/// still works. The server builds the budget with the LLM, so submitting can take a minute.
 class EventCreatePage extends ConsumerWidget {
   const EventCreatePage({super.key});
 
+  Future<String?> _create(
+    BuildContext context,
+    WidgetRef ref,
+    CreateEventGroupBody body,
+  ) async {
+    final EventGroup created;
+    try {
+      created = await ref.read(organizerRepositoryProvider).createEventGroup(body);
+    } catch (e) {
+      return friendlyError(e, 'Could not create the event. Please try again.');
+    }
+    await ref.read(organizerDataProvider.notifier).reloadEvents();
+    ref.read(selectedEventIdProvider.notifier).select(created.id);
+    // Replace the form, so Back from the new event goes to the list, not back to this form.
+    if (context.mounted) context.pushReplacement(AppPaths.eventHome(created.id));
+    return null;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return EventFormView(
-      onBack: () => _leave(context, AppPaths.events),
-      onSubmit: (v, _) async {
-        final EventGroup created;
-        try {
-          created = await ref.read(organizerRepositoryProvider).createEventGroup(
-                CreateEventGroupBody(
-                  eventType: v.type,
-                  name: v.name,
-                  region: v.region,
-                  totalBudget: v.budget,
-                  budgetTier: v.tier,
-                  guestCountEstimate: v.guests,
-                  primaryDate: toDateOnly(v.date),
-                ),
-              );
-        } catch (e) {
-          return friendlyError(e, 'Could not create the event. Please try again.');
-        }
-        await ref.read(organizerDataProvider.notifier).reloadEvents();
-        ref.read(selectedEventIdProvider.notifier).select(created.id);
-        // Replace the form, so Back from the new event goes to the list, not back to this form.
-        if (context.mounted) context.pushReplacement(AppPaths.eventHome(created.id));
-        return null;
-      },
+    void back() => _leave(context, AppPaths.events);
+    final profiles = ref.watch(eventProfilesProvider);
+    final list = profiles.value;
+    // A broken draft is just ignored, so only wait while it is still loading.
+    final draft = ref.watch(eventDraftProvider);
+    if (list == null || draft.isLoading) {
+      if (!profiles.hasError) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('New event'),
+            leading: IconButton(tooltip: 'Back', icon: const Icon(Icons.arrow_back), onPressed: back),
+          ),
+          body: const Center(child: CircularProgressIndicator()),
+        );
+      }
+      return EventFormView(
+        onBack: back,
+        onSubmit: (v, _) => _create(
+          context,
+          ref,
+          CreateEventGroupBody(
+            eventType: v.type,
+            name: v.name,
+            region: v.region,
+            totalBudget: v.budget,
+            budgetTier: v.tier,
+            guestCountEstimate: v.guests,
+            primaryDate: toDateOnly(v.date),
+          ),
+        ),
+      );
+    }
+    final cache = ref.read(localCacheProvider);
+    return EventWizardView(
+      profiles: list,
+      draft: draft.value,
+      onGenerate: (description) => ref.read(organizerRepositoryProvider).generateEventProfile(description),
+      onDraftChanged: (d) =>
+          d == null ? cache.remove(WizardDraft.storageKey) : cache.write(WizardDraft.storageKey, d.encode()),
+      onBack: back,
+      onSubmit: (r) => _create(
+        context,
+        ref,
+        CreateEventGroupBody(
+          eventType: r.type,
+          name: r.name,
+          region: r.region,
+          religionOrTradition: r.religionOrTradition,
+          details: r.details.isEmpty ? null : r.details,
+          generatedProfileId: r.generatedProfileId,
+          totalBudget: r.budget,
+          budgetTier: r.tier,
+          guestCountEstimate: r.guests,
+          primaryDate: toDateOnly(r.date),
+        ),
+      ),
     );
   }
 }

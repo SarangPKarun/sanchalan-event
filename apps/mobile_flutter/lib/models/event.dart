@@ -112,6 +112,8 @@ class CreateEventGroupBody {
     required this.name,
     required this.region,
     this.religionOrTradition,
+    this.details,
+    this.generatedProfileId,
     required this.totalBudget,
     required this.budgetTier,
     required this.guestCountEstimate,
@@ -123,6 +125,12 @@ class CreateEventGroupBody {
   final String name;
   final String region;
   final String? religionOrTradition;
+
+  /// Type-specific wizard answers (community, theme, venue style, ...).
+  final Map<String, dynamic>? details;
+
+  /// Set when a custom event used LLM-written questions.
+  final String? generatedProfileId;
   final double totalBudget;
   final BudgetTier budgetTier;
   final int guestCountEstimate;
