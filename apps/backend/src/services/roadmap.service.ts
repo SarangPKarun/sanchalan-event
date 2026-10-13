@@ -63,6 +63,7 @@ export function buildRoadmapPrompt(
         eventType: eventGroup.eventType,
         region: eventGroup.region,
         religionOrTradition: eventGroup.religionOrTradition,
+        details: eventGroup.details ?? null,
         guestCountEstimate: eventGroup.guestCountEstimate,
         budgetTier: eventGroup.budgetTier,
         primaryDate: toDateOnly(eventGroup.primaryDate),
@@ -368,6 +369,7 @@ export async function generateRoadmap(
     eventType: eventGroup.eventType,
     region: eventGroup.region,
     religionOrTradition: eventGroup.religionOrTradition,
+    details: eventGroup.details ?? null,
     budgetTier: eventGroup.budgetTier,
     guestCountEstimate: eventGroup.guestCountEstimate,
   };

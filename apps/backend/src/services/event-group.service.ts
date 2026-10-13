@@ -4,6 +4,8 @@ import { AppError } from "../lib/errors.js";
 import { toNumber, toDateOnly } from "../lib/serialize.js";
 import { computeBudgetAllocations } from "../config/budget-splits.js";
 import { generateBudgetSplit } from "./budget-split.service.js";
+import { validateEventDetails, validateEventDetailsForType } from "./event-profile.service.js";
+import { getGeneratedProfileForOrganizer } from "./event-profile-generator.service.js";
 import type {
   CreateEventGroupInput,
   UpdateEventGroupInput,
@@ -98,6 +100,13 @@ function serializeEventGroupWithRoadmap(
 export async function createEventGroup(organizerId: string, input: CreateEventGroupInput) {
   const organizer = await prisma.organizer.findUniqueOrThrow({ where: { id: organizerId } });
   assertProfileComplete(organizer);
+  if (input.generatedProfileId) {
+    if (input.eventType !== "custom") throw new AppError(400, "generatedProfileId is only for custom events");
+    const profile = await getGeneratedProfileForOrganizer(organizerId, input.generatedProfileId);
+    validateEventDetails(profile, input, input.details);
+  } else {
+    validateEventDetailsForType(input.eventType, input, input.details);
+  }
 
   // LLM call happens before (not inside) the transaction so no DB connection is held open meanwhile.
   const split = await generateBudgetSplit({
@@ -105,6 +114,7 @@ export async function createEventGroup(organizerId: string, input: CreateEventGr
     name: input.name,
     region: input.region,
     religionOrTradition: input.religionOrTradition ?? null,
+    details: input.details ?? null,
     guestCountEstimate: input.guestCountEstimate,
     budgetTier: input.budgetTier,
     totalBudget: input.totalBudget,
@@ -120,6 +130,7 @@ export async function createEventGroup(organizerId: string, input: CreateEventGr
         name: input.name,
         region: input.region,
         religionOrTradition: input.religionOrTradition ?? null,
+        ...(input.details ? { details: input.details as Prisma.InputJsonObject } : {}),
         totalBudget: input.totalBudget,
         budgetTier: input.budgetTier,
         guestCountEstimate: input.guestCountEstimate,

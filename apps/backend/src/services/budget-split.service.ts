@@ -7,6 +7,8 @@ export interface BudgetSplitInput {
   name: string;
   region: string;
   religionOrTradition?: string | null;
+  /** Type-specific answers from the creation wizard (community, theme, venue style, ...). */
+  details?: Record<string, unknown> | null;
   guestCountEstimate: number;
   budgetTier: string;
   totalBudget: number;
@@ -39,6 +41,7 @@ export function buildBudgetSplitPrompt(input: BudgetSplitInput) {
         name: input.name,
         region: input.region,
         religionOrTradition: input.religionOrTradition ?? null,
+        details: input.details ?? null,
         guestCountEstimate: input.guestCountEstimate,
         budgetTier: input.budgetTier,
         totalBudget: input.totalBudget,

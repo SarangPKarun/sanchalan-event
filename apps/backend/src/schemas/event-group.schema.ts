@@ -7,6 +7,10 @@ export const createEventGroupSchema = z.object({
   name: z.string().min(1),
   region: z.string().min(1),
   religionOrTradition: z.string().min(1).optional(),
+  // Type-specific wizard answers; checked against the event type's profile in the service.
+  details: z.record(z.string(), z.unknown()).optional(),
+  // Set when a `custom` event was created from an LLM-written question set.
+  generatedProfileId: z.string().uuid().optional(),
   totalBudget: z.number().positive(),
   budgetTier: z.enum(["essential", "standard", "premium", "luxury"]),
   guestCountEstimate: z.number().int().positive(),

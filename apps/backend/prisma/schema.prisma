@@ -44,8 +44,9 @@ model Organizer {
   createdAt         DateTime        @default(now()) @map("created_at")
   status            OrganizerStatus
 
-  eventGroups     EventGroup[]
-  rolePermissions RolePermission[]
+  eventGroups            EventGroup[]
+  generatedEventProfiles GeneratedEventProfile[]
+  rolePermissions        RolePermission[]
 
   @@map("organizers")
 }
@@ -372,6 +373,8 @@ model EventGroup {
   name                String
   region              String
   religionOrTradition String?          @map("religion_or_tradition")
+  /// Type-specific answers from the creation wizard (see config/event-type-profiles.ts).
+  details             Json?
   totalBudget         Decimal          @map("total_budget") @db.Decimal(12, 2)
   budgetTier          BudgetTier       @map("budget_tier")
   guestCountEstimate  Int              @map("guest_count_estimate")
@@ -395,6 +398,34 @@ model EventGroup {
   reviews               Review[]
 
   @@map("event_groups")
+}
+
+enum GeneratedProfileStatus {
+  draft
+  approved
+  rejected
+}
+
+/// [ACTIVE] A question set the LLM wrote for an event type we have no curated profile for.
+/// Kept so a human can review it and promote good ones to config/event-type-profiles.ts.
+model GeneratedEventProfile {
+  id           String                 @id @default(uuid()) @db.Uuid
+  organizerId  String                 @map("organizer_id") @db.Uuid
+  description  String
+  /// The full profile: { eventType, version, steps }.
+  profile      Json
+  status       GeneratedProfileStatus @default(draft)
+  llmModelUsed String                 @map("llm_model_used")
+  inputTokens  Int                    @default(0) @map("input_tokens")
+  outputTokens Int                    @default(0) @map("output_tokens")
+  latencyMs    Int                    @default(0) @map("latency_ms")
+  createdAt    DateTime               @default(now()) @map("created_at")
+
+  organizer Organizer @relation(fields: [organizerId], references: [id])
+
+  @@index([organizerId])
+  @@index([status, createdAt])
+  @@map("generated_event_profiles")
 }
 
 enum SubEventStatus {
