@@ -16,6 +16,8 @@ export async function generateCompletionDetailed(systemPrompt: string, userPromp
       return callAnthropic(systemPrompt, userPrompt);
     case "openai":
       return callOpenAI(systemPrompt, userPrompt);
+    case "groq":
+      return callOpenAI(systemPrompt, userPrompt, "https://api.groq.com/openai/v1/chat/completions", "Groq");
     case "google":
       return callGemini(systemPrompt, userPrompt);
   }
@@ -67,8 +69,13 @@ async function callAnthropic(system: string, user: string): Promise<LlmResult> {
 // reasoning-tier LLM_MODEL may not accept `response_format`/plain
 // `role: "system"` the same way — this adapter isn't guaranteed uniform
 // across every OpenAI model id.
-async function callOpenAI(system: string, user: string): Promise<LlmResult> {
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+async function callOpenAI(
+  system: string,
+  user: string,
+  url = "https://api.openai.com/v1/chat/completions",
+  label = "OpenAI",
+): Promise<LlmResult> {
+  const res = await fetch(url, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${env.LLM_API_KEY}`,
@@ -86,15 +93,15 @@ async function callOpenAI(system: string, user: string): Promise<LlmResult> {
     }),
   });
   if (!res.ok) {
-    throw new Error(`OpenAI call failed: ${res.status} ${await res.text()}`);
+    throw new Error(`${label} call failed: ${res.status} ${await res.text()}`);
   }
   const data = (await res.json()) as Record<string, any>;
   if (data.choices[0].finish_reason === "length") {
-    throw new Error("OpenAI response truncated.");
+    throw new Error(`${label} response truncated.`);
   }
   const text = data.choices[0].message.content;
   if (!text) {
-    throw new Error("OpenAI response had no content.");
+    throw new Error(`${label} response had no content.`);
   }
   return { text, usage: { inputTokens: data.usage?.prompt_tokens, outputTokens: data.usage?.completion_tokens } };
 }

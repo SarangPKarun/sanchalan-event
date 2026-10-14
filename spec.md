@@ -35,7 +35,7 @@ pnpm monorepo (`pnpm-workspace.yaml`):
 
 - **Backend layering:** `routes/` → `controllers/` → `services/`. Zod `schemas/` handle validation. `lib/` holds env, jwt, hash, llm, msg91 and otp. `middleware/` holds auth and error handling.
 - **Database:** Postgres 16 via Docker locally; Neon in production (direct, non-pooled connection string).
-- **LLM:** a raw-`fetch` adapter (`apps/backend/src/lib/llm.ts`) supporting Anthropic, OpenAI and Gemini, selected by `LLM_PROVIDER` and `LLM_MODEL`. Truncated output is rejected.
+- **LLM:** a raw-`fetch` adapter (`apps/backend/src/lib/llm.ts`) supporting Anthropic, OpenAI, Gemini and Groq, selected by `LLM_PROVIDER` and `LLM_MODEL`. Truncated output is rejected.
 - **SMS:** MSG91, used only when `NODE_ENV=production`; otherwise the OTP is logged to the console.
 - **Planned, not integrated:** WhatsApp Business API (env stubs only).
 - **Deploy flow:** APK → Render (Express) → Neon. See `DEPLOY_AND_APK.md`. Render free tier has about a 50 s cold start.
@@ -233,7 +233,7 @@ All routes require a bearer token except `/auth/*` and `/admin/auth/login`. Ther
   - `DATABASE_URL`
   - `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` (at least 32 characters)
   - `OTP_PROVIDER_API_KEY`
-  - `LLM_PROVIDER` (anthropic, openai or google), `LLM_MODEL`, `LLM_API_KEY`
+  - `LLM_PROVIDER` (anthropic, openai, google or groq), `LLM_MODEL`, `LLM_API_KEY`
 - Optional, with defaults:
   - `PORT` (3000), `NODE_ENV`
   - `JWT_ACCESS_EXPIRES_IN` (15m), `JWT_REFRESH_EXPIRES_IN` (30d)

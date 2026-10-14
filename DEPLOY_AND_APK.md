@@ -116,7 +116,7 @@ missing or invalid.
 | `OTP_MAX_REQUESTS_PER_WINDOW` | `3` |
 | `OTP_REQUEST_WINDOW_MINUTES` | `10` |
 | `OTP_MAX_VERIFY_ATTEMPTS` | `5` |
-| `LLM_PROVIDER` | `anthropic`, `openai` or `google` |
+| `LLM_PROVIDER` | `anthropic`, `openai`, `google` or `groq` |
 | `LLM_MODEL` | model name for that provider |
 | `LLM_API_KEY` | your LLM provider key |
 | `ADMIN_APP_ORIGIN` | URL of the admin web app (or `http://localhost:5173` for now) |

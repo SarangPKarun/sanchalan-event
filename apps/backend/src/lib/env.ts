@@ -18,7 +18,7 @@ const envSchema = z.object({
   OTP_REQUEST_WINDOW_MINUTES: z.coerce.number().default(10),
   OTP_MAX_VERIFY_ATTEMPTS: z.coerce.number().default(5),
 
-  LLM_PROVIDER: z.enum(["anthropic", "openai", "google"]),
+  LLM_PROVIDER: z.enum(["anthropic", "openai", "google", "groq"]),
   LLM_MODEL: z.string().min(1),
   LLM_API_KEY: z.string().min(1),
 
